@@ -1,0 +1,27 @@
+# Entorno virtual Python
+.venv/
+venv/
+env/
+
+# Base de datos local (no subir a producción)
+data/
+*.db
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Variables de entorno locales
+.env
+.env.local
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/

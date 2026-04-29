@@ -1,20 +1,26 @@
 import psycopg2
 import psycopg2.extras
 import os
-from urllib.parse import quote_plus, urlparse, urlunparse
+from urllib.parse import urlparse
 
-def _build_database_url():
-    """Obtiene y normaliza la DATABASE_URL, escapando caracteres especiales en la contraseña."""
+def _get_db_params():
+    """Parsea DATABASE_URL y devuelve los parámetros de conexión como dict.
+    Pasar la contraseña como argumento separado evita problemas de URL-encoding."""
     url = os.environ.get('DATABASE_URL', '')
     if not url:
-        return url
-    # Supabase a veces usa "postgres://" en lugar de "postgresql://"
+        raise RuntimeError("La variable de entorno DATABASE_URL no está configurada.")
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)
-    return url
-
-# Obtener la URL de conexión desde variable de entorno
-DATABASE_URL = _build_database_url()
+    parsed = urlparse(url)
+    return {
+        'host':     parsed.hostname,
+        'port':     parsed.port or 5432,
+        'dbname':   parsed.path.lstrip('/'),
+        'user':     parsed.username,
+        'password': parsed.password,   # urlparse decodifica %xx automáticamente
+        'sslmode':  'require',
+        'connect_timeout': 10,
+    }
 
 MEDIOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta de crédito', 'Tarjeta de débito', 'Mercado Pago', 'Otro']
 
@@ -83,7 +89,7 @@ class PGConnection:
 
 
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(**_get_db_params())
     return PGConnection(conn)
 
 

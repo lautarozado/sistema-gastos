@@ -1,7 +1,7 @@
 import psycopg2
 import psycopg2.extras
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 def _get_db_params():
     """Parsea DATABASE_URL y devuelve los parámetros de conexión como dict.
@@ -16,8 +16,8 @@ def _get_db_params():
         'host':     parsed.hostname,
         'port':     parsed.port or 5432,
         'dbname':   parsed.path.lstrip('/'),
-        'user':     parsed.username,
-        'password': parsed.password,   # urlparse decodifica %xx automáticamente
+    'user':     unquote(parsed.username) if parsed.username else None,
+'password': unquote(parsed.password) if parsed.password else None,  # urlparse decodifica %xx automáticamente
         'sslmode':  'require',
         'connect_timeout': 10,
     }

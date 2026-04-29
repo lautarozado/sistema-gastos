@@ -167,30 +167,72 @@
 
 {% block scripts %}
 <script>
+function montoToMachine(valor) {
+  if (valor === null || valor === undefined) return '0';
+
+  valor = String(valor).trim();
+
+  // Limpieza básica
+  valor = valor.replace(/\$/g, '');
+  valor = valor.replace(/\s/g, '');
+
+  if (valor === '') return '0';
+
+  // Formato argentino con coma decimal:
+  // 1.000.000,50 -> 1000000.50
+  if (valor.includes(',')) {
+    valor = valor.replace(/\./g, '');
+    valor = valor.replace(',', '.');
+  } else {
+    // Formato argentino sin decimales:
+    // 10.000 -> 10000
+    // 1.000.000 -> 1000000
+    const partes = valor.split('.');
+
+    if (partes.length > 1 && partes.slice(1).every(p => p.length === 3)) {
+      valor = partes.join('');
+    }
+  }
+
+  const numero = parseFloat(valor);
+  return isNaN(numero) ? '0' : String(numero);
+}
+
+function parseMonto(valor) {
+  return parseFloat(montoToMachine(valor)) || 0;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   var catSel = document.getElementById('categoria_id');
   var subSel = document.getElementById('subcategoria_id');
   var currentSubId = '{{ gasto.subcategoria_id or "" }}';
 
-  if (catSel && catSel.value) {
+  if (catSel && subSel && catSel.value) {
     loadSubcategorias(catSel.value, subSel, currentSubId);
   }
-  catSel.addEventListener('change', function() {
-    loadSubcategorias(this.value, subSel, null);
-  });
+
+  if (catSel && subSel) {
+    catSel.addEventListener('change', function() {
+      loadSubcategorias(this.value, subSel, null);
+    });
+  }
 
   // Formateo del input de monto
-  initMontoInput('monto');
+  if (typeof initMontoInput === 'function') {
+    initMontoInput('monto');
+  }
 
   document.getElementById('formGasto').addEventListener('submit', function(e) {
     var montoEl = document.getElementById('monto');
-    var monto = parseFloat(montoToMachine(montoEl.value));
+    var monto = parseMonto(montoEl.value);
+
     if (!monto || monto <= 0) {
       e.preventDefault();
       alert('El monto debe ser mayor a cero.');
       montoEl.focus();
       return;
     }
+
     // Normalizar a formato de máquina antes de enviar
     montoEl.value = montoToMachine(montoEl.value);
   });

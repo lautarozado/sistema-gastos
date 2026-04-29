@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Movimientos{% endblock %}
+{% block page_title %}Todos los Movimientos{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('ingresos.nuevo_ingreso') }}" class="btn btn-sm btn-success">
+  <i class="bi bi-plus me-1"></i>Ingreso
+</a>
+<a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-sm btn-danger">
+  <i class="bi bi-plus me-1"></i>Gasto
+</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Período rápido ──────────────────────────────── #}
+<div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+  <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
+  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
+  <a href="?periodo=hoy{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
+  <a href="?periodo=7d{{ qp }}"  class="btn btn-sm {{ 'btn-secondary' if periodo == '7d'  else 'btn-outline-secondary' }}">7 días</a>
+  <a href="?periodo=30d{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
+  <a href="?periodo=90d{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '90d' else 'btn-outline-secondary' }}">90 días</a>
+  <a href="?periodo=todo{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'todo' else 'btn-outline-secondary' }}">Todo</a>
+</div>
+
+{# ── Filtros ─────────────────────────────────────── #}
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">Desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Tipo</label>
+      <select name="tipo" class="form-select">
+        <option value="" {{ 'selected' if tipo == '' }}>Todos</option>
+        <option value="ingreso" {{ 'selected' if tipo == 'ingreso' }}>Solo Ingresos</option>
+        <option value="gasto"   {{ 'selected' if tipo == 'gasto'   }}>Solo Gastos</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Local</label>
+      <select name="local_id" class="form-select">
+        <option value="">Todos</option>
+        {% for l in locales %}
+        <option value="{{ l.id }}" {{ 'selected' if local_id == l.id|string }}>{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Categoría</label>
+      <select name="categoria_id" class="form-select">
+        <option value="">Todas</option>
+        {% for c in categorias %}
+        <option value="{{ c.id }}" {{ 'selected' if categoria_id == c.id|string }}>{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill">
+        <i class="bi bi-funnel"></i>
+      </button>
+      <a href="{{ url_for('movimientos.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+  <div class="mt-2">
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="mostrar_anulados" id="chkAnul" value="1"
+             {{ 'checked' if mostrar_anulados == '1' }} onchange="this.form.submit()">
+      <label class="form-check-label" for="chkAnul" style="font-size:.82rem">Mostrar anulados</label>
+    </div>
+  </div>
+</form>
+
+{# ── Totales ─────────────────────────────────────── #}
+<div class="row g-2 mb-3">
+  <div class="col-4">
+    <div class="stat-card py-3">
+      <div class="stat-icon income" style="width:38px;height:38px;font-size:1rem"><i class="bi bi-arrow-up"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Ingresos</div>
+        <div class="stat-value income" style="font-size:1.15rem">
+          {{ moneda }} {{ "{:,.2f}".format(total_ingresos).replace(",","X").replace(".",",").replace("X",".") }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="stat-card py-3">
+      <div class="stat-icon expense" style="width:38px;height:38px;font-size:1rem"><i class="bi bi-arrow-down"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Gastos</div>
+        <div class="stat-value expense" style="font-size:1.15rem">
+          {{ moneda }} {{ "{:,.2f}".format(total_gastos).replace(",","X").replace(".",",").replace("X",".") }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="stat-card py-3">
+      <div class="stat-icon balance" style="width:38px;height:38px;font-size:1rem"><i class="bi bi-wallet2"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Balance</div>
+        <div class="stat-value {{ 'bal-pos' if balance >= 0 else 'bal-neg' }}" style="font-size:1.15rem">
+          {{ moneda }} {{ "{:,.2f}".format(balance|abs).replace(",","X").replace(".",",").replace("X",".") }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Tabla ───────────────────────────────────────── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-arrow-left-right me-2 text-secondary"></i>
+      {{ movimientos|length }} movimiento{{ 's' if movimientos|length != 1 }}
+    </span>
+  </div>
+  {% if movimientos %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Local</th>
+          <th>Categoría / Sub.</th>
+          <th>Proveedor</th>
+          <th>Descripción</th>
+          <th class="text-end">Monto</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr class="{{ 'row-anulado' if m.anulado }}">
+          <td class="text-nowrap">{{ m.fecha }}</td>
+          <td>
+            {% if m.tipo == 'ingreso' %}
+            <span class="badge-income"><i class="bi bi-arrow-up me-1"></i>Ingreso</span>
+            {% else %}
+            <span class="badge-expense"><i class="bi bi-arrow-down me-1"></i>Gasto</span>
+            {% endif %}
+            {% if m.anulado %}<span class="badge bg-secondary ms-1" style="font-size:.65rem">ANULADO</span>{% endif %}
+          </td>
+          <td>{{ m.local_nombre }}</td>
+          <td>
+            {{ m.categoria_nombre }}
+            {% if m.subcategoria_nombre %}<br><small class="text-muted">{{ m.subcategoria_nombre }}</small>{% endif %}
+          </td>
+          <td>{{ m.proveedor_nombre or '—' }}</td>
+          <td class="text-truncate" style="max-width:160px" title="{{ m.descripcion or '' }}">
+            {{ m.descripcion or '—' }}
+          </td>
+          <td class="text-end text-nowrap {{ 'amount-income' if m.tipo == 'ingreso' else 'amount-expense' }}">
+            {{ moneda }} {{ "{:,.2f}".format(m.monto).replace(",","X").replace(".",",").replace("X",".") }}
+          </td>
+          <td class="text-center text-nowrap">
+            {% if m.tipo == 'gasto' %}
+            <a href="{{ url_for('gastos.editar_gasto', gasto_id=m.id) }}"
+               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% else %}
+            <a href="{{ url_for('ingresos.editar_ingreso', ingreso_id=m.id) }}"
+               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-inbox"></i>
+    <h5>Sin movimientos</h5>
+    <p>No hay registros con los filtros actuales.</p>
+    <div class="d-flex justify-content-center gap-2">
+      <a href="{{ url_for('ingresos.nuevo_ingreso') }}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus me-1"></i>Nuevo Ingreso
+      </a>
+      <a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-danger btn-sm">
+        <i class="bi bi-plus me-1"></i>Nuevo Gasto
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

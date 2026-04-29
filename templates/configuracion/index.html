@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block page_title %}Configuración{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  {# Formulario de configuración #}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-gear-fill me-2 text-primary"></i>Parámetros Generales
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-4">
+            <label class="form-label" for="nombre_negocio">
+              Nombre del negocio <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="nombre_negocio" id="nombre_negocio" class="form-control"
+                   value="{{ config.get('nombre_negocio', '') }}"
+                   placeholder="Nombre de tu negocio" required maxlength="80">
+            <div class="form-text">Aparece en el menú lateral y en los reportes PDF.</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label" for="moneda_simbolo">Símbolo de moneda</label>
+            <div class="input-group" style="max-width:180px">
+              <input type="text" name="moneda_simbolo" id="moneda_simbolo" class="form-control"
+                     value="{{ config.get('moneda_simbolo', '$') }}"
+                     placeholder="$" maxlength="5">
+              <span class="input-group-text text-muted">Ej: $, USD, €</span>
+            </div>
+            <div class="form-text">Se muestra delante de todos los montos.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i>Guardar configuración
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# Panel de estadísticas del sistema #}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-database me-2 text-primary"></i>Estado del Sistema
+      </div>
+      <div class="card-body p-0">
+        <table class="table mb-0">
+          <tbody>
+            <tr>
+              <td class="ps-4"><i class="bi bi-shop-window me-2 text-primary"></i>Locales activos</td>
+              <td class="text-end pe-4 fw-bold">{{ stats.locales }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4"><i class="bi bi-tags me-2 text-primary"></i>Categorías activas</td>
+              <td class="text-end pe-4 fw-bold">{{ stats.categorias }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4"><i class="bi bi-building me-2 text-primary"></i>Proveedores activos</td>
+              <td class="text-end pe-4 fw-bold">{{ stats.proveedores }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4"><i class="bi bi-arrow-down-circle me-2 text-danger"></i>Gastos registrados</td>
+              <td class="text-end pe-4 fw-bold text-danger">{{ stats.gastos }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4"><i class="bi bi-arrow-up-circle me-2 text-success"></i>Ingresos registrados</td>
+              <td class="text-end pe-4 fw-bold text-success">{{ stats.ingresos }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header fw-bold">
+        <i class="bi bi-link-45deg me-2 text-primary"></i>Accesos rápidos
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('locales.index') }}" class="btn btn-outline-primary btn-sm text-start">
+            <i class="bi bi-shop-window me-2"></i>Administrar locales
+          </a>
+          <a href="{{ url_for('categorias.index') }}" class="btn btn-outline-primary btn-sm text-start">
+            <i class="bi bi-tags me-2"></i>Administrar categorías
+          </a>
+          <a href="{{ url_for('proveedores.index') }}" class="btn btn-outline-primary btn-sm text-start">
+            <i class="bi bi-building me-2"></i>Administrar proveedores
+          </a>
+          <a href="{{ url_for('reportes.index') }}" class="btn btn-outline-success btn-sm text-start">
+            <i class="bi bi-bar-chart me-2"></i>Ir a Reportes
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

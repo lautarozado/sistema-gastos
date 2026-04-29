@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Detalle Ingreso #{{ ingreso.id }}{% endblock %}
+{% block page_title %}Detalle de Ingreso{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('ingresos.list_ingresos') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Volver
+</a>
+{% if not ingreso.anulado %}
+<a href="{{ url_for('ingresos.editar_ingreso', ingreso_id=ingreso.id) }}" class="btn btn-sm btn-outline-primary">
+  <i class="bi bi-pencil me-1"></i>Editar
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+
+    {% if ingreso.anulado %}
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+      <i class="bi bi-slash-circle-fill"></i>
+      <strong>Este ingreso está anulado</strong>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <div style="width:32px;height:32px;background:#ecfdf5;border-radius:8px;
+                    display:flex;align-items:center;justify-content:center;color:#10b981">
+          <i class="bi bi-arrow-up-circle-fill"></i>
+        </div>
+        <span class="fw-bold">Ingreso #{{ ingreso.id }}</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="form-label text-muted mb-0" style="font-size:.75rem">PERÍODO</div>
+            <div class="fw-semibold">{{ ingreso.fecha_desde }} al {{ ingreso.fecha_hasta }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label text-muted mb-0" style="font-size:.75rem">LOCAL</div>
+            <div class="fw-semibold">{{ ingreso.local_nombre }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label text-muted mb-0" style="font-size:.75rem">TOTAL</div>
+            <div class="fw-bold amount-income" style="font-size:1.4rem">
+              {{ moneda }} {{ "{:,.2f}".format(ingreso.total).replace(",","X").replace(".",",").replace("X",".") }}
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="form-label text-muted mb-0" style="font-size:.75rem">REGISTRADO</div>
+            <div>{{ ingreso.created_at[:16] if ingreso.created_at else '—' }}</div>
+          </div>
+          {% if ingreso.observaciones %}
+          <div class="col-12">
+            <div class="form-label text-muted mb-0" style="font-size:.75rem">OBSERVACIONES</div>
+            <div>{{ ingreso.observaciones }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-credit-card me-2 text-primary"></i>Desglose por medio de cobro
+      </div>
+      <div class="card-body p-0">
+        {% set icons = {'efectivo': 'bi-cash-coin', 'transferencia': 'bi-bank',
+                        'tarjeta': 'bi-credit-card', 'mercado_pago': 'bi-phone', 'otro': 'bi-three-dots'} %}
+        {% set colors = {'efectivo': '#10b981', 'transferencia': '#4361ee',
+                         'tarjeta': '#f59e0b', 'mercado_pago': '#06b6d4', 'otro': '#8b5cf6'} %}
+        {% set medios_dict = {} %}
+        {% for m in medios %}{% set _ = medios_dict.update({m.medio: m.monto}) %}{% endfor %}
+
+        {% set total_desglose = namespace(v=0) %}
+        <table class="table mb-0">
+          {% for codigo, label in medios_cobro %}
+          {% set monto_med = medios_dict.get(codigo, 0) %}
+          {% if monto_med > 0 %}
+          {% set total_desglose.v = total_desglose.v + monto_med %}
+          <tr>
+            <td style="width:40px;padding:.75rem 1rem">
+              <div style="width:32px;height:32px;border-radius:8px;
+                          background:{{ colors.get(codigo,'#f1f5f9') }}20;
+                          color:{{ colors.get(codigo,'#64748b') }};
+                          display:flex;align-items:center;justify-content:center">
+                <i class="bi {{ icons.get(codigo, 'bi-cash') }}"></i>
+              </div>
+            </td>
+            <td class="fw-semibold">{{ label }}</td>
+            <td class="text-end fw-bold" style="color:{{ colors.get(codigo,'#64748b') }}">
+              {{ moneda }} {{ "{:,.2f}".format(monto_med).replace(",","X").replace(".",",").replace("X",".") }}
+            </td>
+            <td style="width:80px" class="text-end text-muted" style="font-size:.8rem">
+              {{ "{:.1f}".format(monto_med / ingreso.total * 100) }}%
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+          {% if not medios %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Sin desglose registrado.</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

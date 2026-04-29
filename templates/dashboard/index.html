@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Resumen{% endblock %}
+{% block page_title %}Resumen General{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('reportes.index') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-bar-chart me-1"></i>Reportes
+</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Filtros rápidos ─────────────────────────────────── #}
+<div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+  <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
+  <a href="?periodo=hoy{% if local_id %}&local_id={{ local_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
+  <a href="?periodo=7d{% if local_id %}&local_id={{ local_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == '7d' else 'btn-outline-secondary' }}">7 días</a>
+  <a href="?periodo=30d{% if local_id %}&local_id={{ local_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
+  <a href="?periodo=90d{% if local_id %}&local_id={{ local_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == '90d' else 'btn-outline-secondary' }}">90 días</a>
+  <a href="?periodo=todo{% if local_id %}&local_id={{ local_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == 'todo' else 'btn-outline-secondary' }}">Todo</a>
+</div>
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-sm-6 col-md-3">
+      <label class="form-label">Desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <label class="form-label">Local</label>
+      <select name="local_id" class="form-select">
+        <option value="">Todos los locales</option>
+        {% for l in locales %}
+        <option value="{{ l.id }}" {{ 'selected' if local_id == l.id|string }}>{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-6 col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill">
+        <i class="bi bi-funnel me-1"></i>Filtrar
+      </button>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+</form>
+
+{# ── Cards resumen ───────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon income"><i class="bi bi-arrow-up-circle-fill"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Ingresos</div>
+        <div class="stat-value income">{{ moneda }} {{ "{:,.2f}".format(total_ingresos).replace(",","X").replace(".",",").replace("X",".") }}</div>
+        <div class="stat-sub">Período seleccionado</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon expense"><i class="bi bi-arrow-down-circle-fill"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Gastos</div>
+        <div class="stat-value expense">{{ moneda }} {{ "{:,.2f}".format(total_gastos).replace(",","X").replace(".",",").replace("X",".") }}</div>
+        <div class="stat-sub">Período seleccionado</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon balance"><i class="bi bi-wallet2"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Balance</div>
+        {% set b = total_ingresos - total_gastos %}
+        <div class="stat-value {{ 'bal-pos' if b >= 0 else 'bal-neg' }}">
+          {{ moneda }} {{ "{:,.2f}".format(b|abs).replace(",","X").replace(".",",").replace("X",".") }}
+        </div>
+        <div class="stat-sub">{{ 'Positivo' if b >= 0 else 'Negativo' }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon neutral"><i class="bi bi-calendar3"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">Período</div>
+        <div class="stat-value" style="font-size:1rem">{{ fecha_desde }}</div>
+        <div class="stat-sub">al {{ fecha_hasta }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Gráficos principales ─────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-pie-chart-fill text-danger"></i> Gastos por Categoría
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        {% if total_gastos > 0 %}
+        <div class="chart-container" style="height:250px;width:100%">
+          <canvas id="chartCategorias"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="bi bi-pie-chart"></i>
+          <h5>Sin datos</h5>
+          <p>No hay gastos en el período.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-bar-chart-fill text-primary"></i> Tendencia Mensual
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="chartTendencia"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-shop text-primary"></i> Ingresos / Gastos por Local
+      </div>
+      <div class="card-body">
+        <div class="chart-container-sm">
+          <canvas id="chartLocales"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-credit-card text-success"></i> Medios de Cobro
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        {% if total_ingresos > 0 %}
+        <div class="chart-container-sm" style="width:100%">
+          <canvas id="chartMedios"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem">
+          <i class="bi bi-credit-card" style="font-size:2rem"></i>
+          <p class="mb-0">Sin ingresos registrados.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Últimos movimientos ──────────────────────────── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-clock-history me-2 text-secondary"></i>Últimos movimientos</span>
+    <a href="{{ url_for('movimientos.index') }}" class="btn btn-sm btn-outline-primary">
+      Ver todos
+    </a>
+  </div>
+  {% if ultimos %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Local</th>
+          <th>Categoría</th>
+          <th>Descripción</th>
+          <th class="text-end">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in ultimos %}
+        <tr>
+          <td class="text-nowrap">{{ m.fecha }}</td>
+          <td>
+            {% if m.tipo == 'ingreso' %}
+            <span class="badge-income"><i class="bi bi-arrow-up me-1"></i>Ingreso</span>
+            {% else %}
+            <span class="badge-expense"><i class="bi bi-arrow-down me-1"></i>Gasto</span>
+            {% endif %}
+          </td>
+          <td>{{ m.local }}</td>
+          <td>{{ m.categoria }}</td>
+          <td class="text-truncate" style="max-width:180px">{{ m.descripcion or '—' }}</td>
+          <td class="text-end text-nowrap {{ 'amount-income' if m.tipo == 'ingreso' else 'amount-expense' }}">
+            {{ moneda }} {{ "{:,.2f}".format(m.monto).replace(",","X").replace(".",",").replace("X",".") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-inbox"></i>
+    <h5>Sin movimientos</h5>
+    <p>No hay movimientos en el período seleccionado.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dataCat  = {{ chart_categorias | safe }};
+var dataLoc  = {{ chart_locales    | safe }};
+var dataTend = {{ chart_tendencia  | safe }};
+var dataMed  = {{ chart_medios     | safe }};
+
+// Pie: gastos por categoría
+var ctxCat = document.getElementById('chartCategorias');
+if (ctxCat && dataCat.data.reduce((a,b)=>a+b,0) > 0) {
+  new Chart(ctxCat, {
+    type: 'doughnut',
+    data: {
+      labels: dataCat.labels,
+      datasets: [{ data: dataCat.data, backgroundColor: dataCat.colors,
+                   borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+    },
+    options: {
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 12 } },
+        tooltip: { callbacks: { label: function(c){
+          return ' ' + c.label + ': $' + c.raw.toLocaleString('es-AR',{minimumFractionDigits:2});
+        }}}
+      }
+    }
+  });
+}
+
+// Bar: tendencia mensual
+var ctxTend = document.getElementById('chartTendencia');
+if (ctxTend) {
+  new Chart(ctxTend, {
+    type: 'bar',
+    data: {
+      labels: dataTend.labels,
+      datasets: [
+        { label: 'Ingresos', data: dataTend.ingresos, backgroundColor: 'rgba(16,185,129,.75)',
+          borderRadius: 5, borderSkipped: false },
+        { label: 'Gastos',   data: dataTend.gastos,   backgroundColor: 'rgba(239,68,68,.75)',
+          borderRadius: 5, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#f1f5f9' }, beginAtZero: true,
+             ticks: { callback: function(v){ return '$' + v.toLocaleString('es-AR'); } } }
+      }
+    }
+  });
+}
+
+// Bar: por local
+var ctxLoc = document.getElementById('chartLocales');
+if (ctxLoc) {
+  new Chart(ctxLoc, {
+    type: 'bar',
+    data: {
+      labels: dataLoc.labels,
+      datasets: [
+        { label: 'Ingresos', data: dataLoc.ingresos, backgroundColor: 'rgba(16,185,129,.75)',
+          borderRadius: 4 },
+        { label: 'Gastos',   data: dataLoc.gastos,   backgroundColor: 'rgba(239,68,68,.75)',
+          borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#f1f5f9' }, beginAtZero: true,
+             ticks: { callback: function(v){ return '$' + v.toLocaleString('es-AR'); } } }
+      }
+    }
+  });
+}
+
+// Doughnut: medios de cobro
+var ctxMed = document.getElementById('chartMedios');
+if (ctxMed && dataMed.data.reduce((a,b)=>a+b,0) > 0) {
+  new Chart(ctxMed, {
+    type: 'doughnut',
+    data: {
+      labels: dataMed.labels,
+      datasets: [{ data: dataMed.data,
+                   backgroundColor: ['#10b981','#4361ee','#f59e0b','#06b6d4','#8b5cf6'],
+                   borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+</script>
+{% endblock %}

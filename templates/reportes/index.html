@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+{% block page_title %}Reportes{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('reportes.generar_pdf') }}?{{ request.query_string.decode() }}"
+   class="btn btn-sm btn-danger" target="_blank">
+  <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
+</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Período rápido ───────────────────────────── #}
+<div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+  <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
+  <a href="?periodo=hoy{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
+  <a href="?periodo=7d{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == '7d' else 'btn-outline-secondary' }}">7 días</a>
+  <a href="?periodo=30d{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
+  <a href="?periodo=90d{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == '90d' else 'btn-outline-secondary' }}">90 días</a>
+  <a href="?periodo=todo{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
+     class="btn btn-sm {{ 'btn-secondary' if periodo == 'todo' else 'btn-outline-secondary' }}">Todo</a>
+</div>
+
+{# ── Filtros ──────────────────────────────────── #}
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">Desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Local</label>
+      <select name="local_id" class="form-select">
+        <option value="">Todos</option>
+        {% for l in locales %}
+        <option value="{{ l.id }}" {{ 'selected' if local_id == l.id|string }}>{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Categoría</label>
+      <select name="categoria_id" class="form-select">
+        <option value="">Todas</option>
+        {% for c in categorias %}
+        <option value="{{ c.id }}" {{ 'selected' if categoria_id == c.id|string }}>{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Proveedor</label>
+      <select name="proveedor_id" class="form-select">
+        <option value="">Todos</option>
+        {% for p in proveedores %}
+        <option value="{{ p.id }}" {{ 'selected' if proveedor_id == p.id|string }}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill">
+        <i class="bi bi-funnel me-1"></i>Filtrar
+      </button>
+      <a href="{{ url_for('reportes.index') }}" class="btn btn-outline-secondary btn-icon">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+</form>
+
+{# ── Cards resumen ────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="report-box">
+      <div class="label"><i class="bi bi-arrow-up-circle me-1 text-success"></i>Total Ingresos</div>
+      <div class="value text-success">
+        {{ moneda }} {{ "{:,.2f}".format(data.total_ingresos).replace(",","X").replace(".",",").replace("X",".") }}
+      </div>
+      <div class="text-muted" style="font-size:.78rem;margin-top:.25rem">{{ data.count_ingresos }} registro{{ 's' if data.count_ingresos != 1 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="report-box">
+      <div class="label"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>Total Gastos</div>
+      <div class="value text-danger">
+        {{ moneda }} {{ "{:,.2f}".format(data.total_gastos).replace(",","X").replace(".",",").replace("X",".") }}
+      </div>
+      <div class="text-muted" style="font-size:.78rem;margin-top:.25rem">{{ data.count_gastos }} gasto{{ 's' if data.count_gastos != 1 }}</div>
+    </div>
+  </div>
+  {% set bal = data.balance %}
+  <div class="col-6 col-lg-3">
+    <div class="report-box">
+      <div class="label"><i class="bi bi-wallet2 me-1 text-primary"></i>Balance Neto</div>
+      <div class="value {{ 'text-success' if bal >= 0 else 'text-danger' }}">
+        {{ moneda }} {{ "{:,.2f}".format(bal|abs).replace(",","X").replace(".",",").replace("X",".") }}
+        {{ '▲' if bal >= 0 else '▼' }}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="report-box">
+      <div class="label"><i class="bi bi-calendar3 me-1 text-secondary"></i>Período</div>
+      <div class="value" style="font-size:.95rem">{{ fecha_desde }}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-top:.15rem">al {{ fecha_hasta }}</div>
+    </div>
+  </div>
+</div>
+
+{# ── Gráficos ─────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header fw-bold">
+        <i class="bi bi-pie-chart-fill me-2 text-danger"></i>Gastos por Categoría
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        {% if data.total_gastos > 0 %}
+        <div class="chart-container" style="width:100%">
+          <canvas id="chartCat"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem"><i class="bi bi-pie-chart" style="font-size:2rem"></i><p class="mb-0">Sin gastos.</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="row g-3 h-100">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header fw-bold">
+            <i class="bi bi-bar-chart-fill me-2 text-success"></i>Ingresos por Local
+          </div>
+          <div class="card-body">
+            {% if data.total_ingresos > 0 %}
+            <div class="chart-container-sm">
+              <canvas id="chartLocal"></canvas>
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:1.5rem"><i class="bi bi-shop" style="font-size:2rem"></i><p class="mb-0">Sin ingresos.</p></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% if data.medios_cobro %}
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header fw-bold">
+            <i class="bi bi-credit-card-fill me-2 text-primary"></i>Medios de Cobro
+          </div>
+          <div class="card-body">
+            <div class="chart-container-sm">
+              <canvas id="chartMedios"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── Tablas de detalle ────────────────────────── #}
+<div class="row g-3">
+
+  {# Gastos por categoría #}
+  {% if data.gastos_por_cat %}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-tags me-2 text-danger"></i>Gastos por Categoría
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Categoría</th><th class="text-center">Cant.</th><th class="text-end">Total</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% set cat_sum = data.gastos_por_cat | sum(attribute='total') %}
+            {% set tg = cat_sum if cat_sum > 0 else 1 %}
+            {% for r in data.gastos_por_cat %}
+            <tr>
+              <td>
+                <span class="color-dot me-2" style="background:{{ r.color or '#6c757d' }}"></span>
+                {{ r.nombre }}
+              </td>
+              <td class="text-center">{{ r.cantidad }}</td>
+              <td class="text-end amount-expense fw-bold">
+                {{ moneda }} {{ "{:,.2f}".format(r.total).replace(",","X").replace(".",",").replace("X",".") }}
+              </td>
+              <td class="text-end text-muted" style="font-size:.82rem">
+                {{ "{:.1f}".format(r.total / tg * 100) }}%
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Ingresos por local #}
+  {% if data.ingresos_por_local %}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-shop me-2 text-success"></i>Ingresos por Local
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Local</th><th class="text-center">Períodos</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for r in data.ingresos_por_local %}
+            <tr>
+              <td>{{ r.nombre }}</td>
+              <td class="text-center">{{ r.cantidad }}</td>
+              <td class="text-end amount-income fw-bold">
+                {{ moneda }} {{ "{:,.2f}".format(r.total).replace(",","X").replace(".",",").replace("X",".") }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Gastos por local #}
+  {% if data.gastos_por_local %}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-shop me-2 text-danger"></i>Gastos por Local
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Local</th><th class="text-center">Cant.</th><th class="text-end">Total</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% set loc_sum = data.gastos_por_local | sum(attribute='total') %}
+            {% set tg2 = loc_sum if loc_sum > 0 else 1 %}
+            {% for r in data.gastos_por_local %}
+            <tr>
+              <td>{{ r.nombre }}</td>
+              <td class="text-center">{{ r.cantidad }}</td>
+              <td class="text-end amount-expense fw-bold">
+                {{ moneda }} {{ "{:,.2f}".format(r.total).replace(",","X").replace(".",",").replace("X",".") }}
+              </td>
+              <td class="text-end text-muted" style="font-size:.82rem">
+                {{ "{:.1f}".format(r.total / tg2 * 100) }}%
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Gastos por proveedor #}
+  {% if data.gastos_por_proveedor %}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-building me-2 text-danger"></i>Gastos por Proveedor
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Proveedor</th><th class="text-center">Cant.</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for r in data.gastos_por_proveedor %}
+            <tr>
+              <td>{{ r.nombre }}</td>
+              <td class="text-center">{{ r.cantidad }}</td>
+              <td class="text-end amount-expense fw-bold">
+                {{ moneda }} {{ "{:,.2f}".format(r.total).replace(",","X").replace(".",",").replace("X",".") }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Medios de cobro #}
+  {% if data.medios_cobro %}
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header fw-bold">
+        <i class="bi bi-credit-card me-2 text-primary"></i>Composición Ingresos — Medios de Cobro
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Medio</th><th class="text-end">Total</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% set med_sum = data.medios_cobro | sum(attribute='total') %}
+            {% set ti = med_sum if med_sum > 0 else 1 %}
+            {% for r in data.medios_cobro %}
+            <tr>
+              <td class="text-capitalize">{{ r.medio.replace('_',' ') }}</td>
+              <td class="text-end amount-income fw-bold">
+                {{ moneda }} {{ "{:,.2f}".format(r.total).replace(",","X").replace(".",",").replace("X",".") }}
+              </td>
+              <td class="text-end text-muted" style="font-size:.82rem">
+                {{ "{:.1f}".format(r.total / ti * 100) }}%
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>{# /row tablas #}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dataCat   = {{ chart_cat   | safe }};
+var dataLocal = {{ chart_local | safe }};
+var dataMed   = {{ chart_medios | safe }};
+
+var ctxCat = document.getElementById('chartCat');
+if (ctxCat && dataCat.data.length) {
+  new Chart(ctxCat, {
+    type: 'doughnut',
+    data: {
+      labels: dataCat.labels,
+      datasets: [{ data: dataCat.data, backgroundColor: dataCat.colors.length ? dataCat.colors : CHART_PALETTE,
+                   borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+    },
+    options: {
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: function(c){
+          return ' ' + c.label + ': $' + c.raw.toLocaleString('es-AR',{minimumFractionDigits:2});
+        }}}
+      }
+    }
+  });
+}
+
+var ctxLocal = document.getElementById('chartLocal');
+if (ctxLocal && dataLocal.labels.length) {
+  new Chart(ctxLocal, {
+    type: 'bar',
+    data: {
+      labels: dataLocal.labels,
+      datasets: [{ label: 'Ingresos', data: dataLocal.ingresos,
+                   backgroundColor: 'rgba(16,185,129,.75)', borderRadius: 5 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+             ticks: { callback: function(v){ return '$' + v.toLocaleString('es-AR'); } } }
+      }
+    }
+  });
+}
+
+var ctxMed = document.getElementById('chartMedios');
+if (ctxMed && dataMed.data && dataMed.data.length) {
+  new Chart(ctxMed, {
+    type: 'doughnut',
+    data: {
+      labels: dataMed.labels,
+      datasets: [{ data: dataMed.data,
+                   backgroundColor: ['#10b981','#4361ee','#f59e0b','#06b6d4','#8b5cf6'],
+                   borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { cutout: '55%', plugins: { legend: { position: 'bottom' } } }
+  });
+}
+</script>
+{% endblock %}

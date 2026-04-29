@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar Gasto' if modo == 'editar' else 'Nuevo Gasto' }}{% endblock %}
+{% block page_title %}{{ 'Editar Gasto' if modo == 'editar' else 'Registrar Gasto' }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('gastos.list_gastos') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Volver
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8 col-xl-7">
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <div style="width:32px;height:32px;background:#fef2f2;border-radius:8px;
+                    display:flex;align-items:center;justify-content:center;color:#ef4444;font-size:1rem">
+          <i class="bi bi-arrow-down-circle-fill"></i>
+        </div>
+        <span class="fw-bold">{{ 'Editar gasto' if modo == 'editar' else 'Nuevo gasto' }}</span>
+      </div>
+
+      <div class="card-body">
+        <form method="post" id="formGasto" novalidate>
+
+          <div class="row g-3">
+            {# Fecha #}
+            <div class="col-sm-6">
+              <label class="form-label" for="fecha">Fecha <span class="text-danger">*</span></label>
+              <input type="date" name="fecha" id="fecha" class="form-control"
+                     value="{{ gasto.fecha or '' }}" required>
+            </div>
+
+            {# Local #}
+            <div class="col-sm-6">
+              <label class="form-label" for="local_id">Local <span class="text-danger">*</span></label>
+              <select name="local_id" id="local_id" class="form-select" required>
+                <option value="">— Seleccionar local —</option>
+                {% for l in locales %}
+                <option value="{{ l.id }}"
+                  {{ 'selected' if gasto.local_id|string == l.id|string }}>
+                  {{ l.nombre }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Categoría #}
+            <div class="col-sm-6">
+              <label class="form-label" for="categoria_id">Categoría <span class="text-danger">*</span></label>
+              <select name="categoria_id" id="categoria_id" class="form-select" required
+                      onchange="loadSubcategorias(this.value, document.getElementById('subcategoria_id'), null)">
+                <option value="">— Seleccionar categoría —</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}"
+                  {{ 'selected' if gasto.categoria_id|string == c.id|string }}>
+                  {{ c.nombre }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Subcategoría #}
+            <div class="col-sm-6">
+              <label class="form-label" for="subcategoria_id">Subcategoría</label>
+              <select name="subcategoria_id" id="subcategoria_id" class="form-select">
+                <option value="">Sin subcategoría</option>
+                {% if subcategorias is defined %}
+                {% for s in subcategorias %}
+                <option value="{{ s.id }}"
+                  {{ 'selected' if gasto.subcategoria_id|string == s.id|string }}>
+                  {{ s.nombre }}
+                </option>
+                {% endfor %}
+                {% endif %}
+              </select>
+              <div class="form-text">Se carga automáticamente al elegir la categoría.</div>
+            </div>
+
+            {# Monto #}
+            <div class="col-sm-6">
+              <label class="form-label" for="monto">Monto <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text fw-bold text-danger">{{ moneda }}</span>
+                <input type="text" inputmode="decimal" name="monto" id="monto" class="form-control"
+                       placeholder="0,00" autocomplete="off"
+                       value="{{ gasto.monto or '' }}" required>
+              </div>
+            </div>
+
+            {# Medio de pago #}
+            <div class="col-sm-6">
+              <label class="form-label" for="medio_pago">Medio de pago</label>
+              <select name="medio_pago" id="medio_pago" class="form-select">
+                <option value="">— Sin especificar —</option>
+                {% for m in medios_pago %}
+                <option value="{{ m }}" {{ 'selected' if gasto.medio_pago == m }}>{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Proveedor #}
+            <div class="col-sm-6">
+              <label class="form-label" for="proveedor_id">Proveedor</label>
+              <select name="proveedor_id" id="proveedor_id" class="form-select">
+                <option value="">— Sin proveedor —</option>
+                {% for p in proveedores %}
+                <option value="{{ p.id }}"
+                  {{ 'selected' if gasto.proveedor_id|string == p.id|string }}>
+                  {{ p.nombre }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Descripción #}
+            <div class="col-sm-6">
+              <label class="form-label" for="descripcion">Descripción</label>
+              <input type="text" name="descripcion" id="descripcion" class="form-control"
+                     placeholder="Ej: Pago factura mayo, Compra insumos..."
+                     value="{{ gasto.descripcion or '' }}" maxlength="200">
+            </div>
+
+            {# Observaciones #}
+            <div class="col-12">
+              <label class="form-label" for="observaciones">Observaciones</label>
+              <textarea name="observaciones" id="observaciones" class="form-control"
+                        placeholder="Notas internas, detalles adicionales..."
+                        rows="2">{{ gasto.observaciones or '' }}</textarea>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('gastos.list_gastos') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Cancelar
+            </a>
+            <button type="submit" class="btn btn-danger px-4">
+              <i class="bi bi-check-lg me-1"></i>
+              {{ 'Guardar cambios' if modo == 'editar' else 'Registrar gasto' }}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    {# Hint categorías #}
+    {% if not categorias %}
+    <div class="alert alert-warning mt-3">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      No hay categorías activas. <a href="{{ url_for('categorias.index') }}">Creá una aquí</a>.
+    </div>
+    {% endif %}
+    {% if not locales %}
+    <div class="alert alert-warning mt-3">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      No hay locales activos. <a href="{{ url_for('locales.index') }}">Creá uno aquí</a>.
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var catSel = document.getElementById('categoria_id');
+  var subSel = document.getElementById('subcategoria_id');
+  var currentSubId = '{{ gasto.subcategoria_id or "" }}';
+
+  if (catSel && catSel.value) {
+    loadSubcategorias(catSel.value, subSel, currentSubId);
+  }
+  catSel.addEventListener('change', function() {
+    loadSubcategorias(this.value, subSel, null);
+  });
+
+  // Formateo del input de monto
+  initMontoInput('monto');
+
+  document.getElementById('formGasto').addEventListener('submit', function(e) {
+    var montoEl = document.getElementById('monto');
+    var monto = parseFloat(montoToMachine(montoEl.value));
+    if (!monto || monto <= 0) {
+      e.preventDefault();
+      alert('El monto debe ser mayor a cero.');
+      montoEl.focus();
+      return;
+    }
+    // Normalizar a formato de máquina antes de enviar
+    montoEl.value = montoToMachine(montoEl.value);
+  });
+});
+</script>
+{% endblock %}

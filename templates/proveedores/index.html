@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Proveedores{% endblock %}
+{% block page_title %}Proveedores{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoProv">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo Proveedor
+</button>
+{% endblock %}
+
+{% block content %}
+
+{# ── Búsqueda ─────────────────────────────────── #}
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col">
+      <label class="form-label">Buscar proveedor</label>
+      <input type="text" name="buscar" class="form-control" placeholder="Nombre del proveedor..."
+             value="{{ buscar }}">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+      {% if buscar %}
+      <a href="{{ url_for('proveedores.index') }}" class="btn btn-outline-secondary ms-1">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+{# ── Tabla de proveedores ─────────────────────── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-building me-2 text-secondary"></i>
+      {{ proveedores|length }} proveedor{{ 'es' if proveedores|length != 1 }}
+    </span>
+  </div>
+
+  {% if proveedores %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:40px"></th>
+          <th>Nombre</th>
+          <th>Teléfono</th>
+          <th>Observaciones</th>
+          <th class="text-center">Estado</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in proveedores %}
+        <tr class="{{ '' if p.activo else 'row-anulado' }}">
+          <td>
+            <div class="prov-avatar">{{ p.nombre[0].upper() }}</div>
+          </td>
+          <td class="fw-semibold">{{ p.nombre }}</td>
+          <td>
+            {% if p.telefono %}
+            <a href="tel:{{ p.telefono }}" class="text-decoration-none text-muted">
+              <i class="bi bi-telephone me-1"></i>{{ p.telefono }}
+            </a>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-truncate" style="max-width:220px" title="{{ p.observaciones or '' }}">
+            {{ p.observaciones or '—' }}
+          </td>
+          <td class="text-center">
+            {% if p.activo %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.75rem">Activo</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.75rem">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="text-center text-nowrap">
+            <button class="btn btn-xs btn-outline-primary btn-icon"
+                    data-bs-toggle="modal" data-bs-target="#modalEditProv"
+                    onclick="fillEditProv({{ p.id }}, '{{ p.nombre|e }}', '{{ p.telefono or '' }}', '{{ (p.observaciones or '')|e }}')"
+                    title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <form method="post" action="{{ url_for('proveedores.toggle_proveedor', prov_id=p.id) }}" class="d-inline">
+              <button type="submit" class="btn btn-xs {{ 'btn-outline-warning' if p.activo else 'btn-outline-success' }} btn-icon"
+                      title="{{ 'Desactivar' if p.activo else 'Activar' }}">
+                <i class="bi bi-{{ 'eye-slash' if p.activo else 'eye' }}"></i>
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('proveedores.eliminar_proveedor', prov_id=p.id) }}" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar al proveedor {{ p.nombre|e }}?')">
+              <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-building"></i>
+    <h5>Sin proveedores</h5>
+    <p>
+      {% if buscar %}No se encontraron proveedores con "{{ buscar }}".
+      {% else %}Creá el primer proveedor para asociarlo a tus gastos.{% endif %}
+    </p>
+    {% if not buscar %}
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoProv">
+      <i class="bi bi-plus me-1"></i>Nuevo Proveedor
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{# ══ MODALES ════════════════════════════════════════════════════ #}
+
+{# Modal nuevo proveedor #}
+<div class="modal fade" id="modalNuevoProv" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('proveedores.nuevo_proveedor') }}">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-building me-2 text-primary"></i>Nuevo Proveedor</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control"
+                   placeholder="Nombre del proveedor" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Teléfono</label>
+            <input type="text" name="telefono" class="form-control" placeholder="Ej: 11 2345-6789">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Observaciones</label>
+            <textarea name="observaciones" class="form-control" rows="2"
+                      placeholder="Notas, condiciones de pago, etc."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Proveedor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Modal editar proveedor #}
+<div class="modal fade" id="modalEditProv" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="formEditProv" action="">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar Proveedor</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" id="editProvNombre" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Teléfono</label>
+            <input type="text" name="telefono" id="editProvTel" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Observaciones</label>
+            <textarea name="observaciones" id="editProvObs" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillEditProv(id, nombre, telefono, observaciones) {
+  document.getElementById('formEditProv').action = '/proveedores/' + id + '/editar';
+  document.getElementById('editProvNombre').value = nombre;
+  document.getElementById('editProvTel').value    = telefono;
+  document.getElementById('editProvObs').value    = observaciones;
+}
+</script>
+{% endblock %}

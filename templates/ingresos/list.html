@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Ingresos{% endblock %}
+{% block page_title %}Ingresos{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('ingresos.nuevo_ingreso') }}" class="btn btn-success btn-sm">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo Ingreso
+</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Filtros ─────────────────────────────────────── #}
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">Desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Local</label>
+      <select name="local_id" class="form-select">
+        <option value="">Todos los locales</option>
+        {% for l in locales %}
+        <option value="{{ l.id }}" {{ 'selected' if local_id == l.id|string }}>{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill">
+        <i class="bi bi-funnel me-1"></i>Filtrar
+      </button>
+      <a href="{{ url_for('ingresos.list_ingresos') }}" class="btn btn-outline-secondary btn-icon">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+  <div class="mt-2 d-flex align-items-center gap-3">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="mostrar_anulados" id="chkAnul" value="1"
+             {{ 'checked' if mostrar_anulados == '1' }} onchange="this.form.submit()">
+      <label class="form-check-label" for="chkAnul" style="font-size:.82rem">Mostrar anulados</label>
+    </div>
+    {% if total_filtrado > 0 %}
+    <span class="ms-auto fw-bold amount-income" style="font-size:.95rem">
+      Total: {{ moneda }} {{ "{:,.2f}".format(total_filtrado).replace(",","X").replace(".",",").replace("X",".") }}
+    </span>
+    {% endif %}
+  </div>
+</form>
+
+{# ── Tabla de ingresos ───────────────────────────── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span>
+      <i class="bi bi-arrow-up-circle-fill text-success me-2"></i>
+      {{ ingresos|length }} registro{{ 's' if ingresos|length != 1 }}
+    </span>
+    <span class="text-muted" style="font-size:.82rem">
+      Usá <i class="bi bi-eye"></i> para ver el desglose por medio de cobro
+    </span>
+  </div>
+
+  {% if ingresos %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Período</th>
+          <th>Local</th>
+          <th>Observaciones</th>
+          <th class="text-end">Total</th>
+          <th class="text-center">Estado</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in ingresos %}
+        <tr class="{{ 'row-anulado' if i.anulado }}">
+          <td class="text-nowrap">
+            <div class="fw-semibold">{{ i.fecha_desde }}</div>
+            {% if i.fecha_desde != i.fecha_hasta %}
+            <small class="text-muted">al {{ i.fecha_hasta }}</small>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.8rem">
+              {{ i.local_nombre }}
+            </span>
+          </td>
+          <td class="text-truncate" style="max-width:200px" title="{{ i.observaciones or '' }}">
+            {{ i.observaciones or '—' }}
+          </td>
+          <td class="text-end fw-bold amount-income text-nowrap" style="font-size:1rem">
+            {{ moneda }} {{ "{:,.2f}".format(i.total).replace(",","X").replace(".",",").replace("X",".") }}
+          </td>
+          <td class="text-center">
+            {% if i.anulado %}
+            <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.72rem">Anulado</span>
+            {% else %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.72rem">Activo</span>
+            {% endif %}
+          </td>
+          <td class="text-center text-nowrap">
+            <a href="{{ url_for('ingresos.detalle_ingreso', ingreso_id=i.id) }}"
+               class="btn btn-xs btn-outline-success btn-icon" title="Ver desglose de medios">
+              <i class="bi bi-eye"></i>
+            </a>
+            {% if not i.anulado %}
+            <a href="{{ url_for('ingresos.editar_ingreso', ingreso_id=i.id) }}"
+               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{{ url_for('ingresos.anular_ingreso', ingreso_id=i.id) }}"
+                  class="d-inline" onsubmit="return confirmarAnular(this)">
+              <button type="submit" class="btn btn-xs btn-outline-warning btn-icon" title="Anular">
+                <i class="bi bi-slash-circle"></i>
+              </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('ingresos.eliminar_ingreso', ingreso_id=i.id) }}"
+                  class="d-inline"
+                  onsubmit="confirmarEliminar(event, this, 'ingreso del {{ i.fecha_desde }}')">
+              <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="table-light fw-bold">
+          <td colspan="3" class="text-end">Total visible:</td>
+          <td class="text-end text-nowrap amount-income">
+            {{ moneda }} {{ "{:,.2f}".format(total_filtrado).replace(",","X").replace(".",",").replace("X",".") }}
+          </td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-arrow-up-circle"></i>
+    <h5>Sin ingresos registrados</h5>
+    <p>No hay ingresos con los filtros aplicados.</p>
+    <a href="{{ url_for('ingresos.nuevo_ingreso') }}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus me-1"></i>Registrar primer ingreso
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarEliminar(e, form, nombre) {
+  e.preventDefault();
+  if (confirm('¿Eliminar definitivamente el ' + nombre + '?\nEsta acción no se puede deshacer.')) {
+    form.submit();
+  }
+}
+</script>
+{% endblock %}

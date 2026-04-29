@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}Categorías{% endblock %}
+{% block page_title %}Categorías{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
+  <i class="bi bi-plus-lg me-1"></i>Nueva Categoría
+</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+  {# Columna izquierda: lista de categorías #}
+  <div class="col-12 col-lg-8">
+
+    {% if cats_con_subs %}
+    {% for item in cats_con_subs %}
+    {% set cat = item.cat %}
+    {% set subs = item.subs %}
+    <div class="cat-card">
+      <div class="cat-header">
+        <div class="cat-name">
+          <span class="color-dot" style="background:{{ cat.color or '#6c757d' }}"></span>
+          <span>{{ cat.nombre }}</span>
+          {% if not cat.activo %}
+          <span class="badge bg-secondary" style="font-size:.68rem">Inactiva</span>
+          {% endif %}
+          <span class="badge bg-light text-secondary border" style="font-size:.68rem">
+            {{ cat.tipo }}
+          </span>
+        </div>
+        <div class="d-flex gap-1 align-items-center">
+          <button class="btn btn-xs btn-outline-primary btn-icon"
+                  data-bs-toggle="modal" data-bs-target="#modalEditCat"
+                  onclick="fillEditCat({{ cat.id }}, '{{ cat.nombre|e }}', '{{ cat.color or '#6c757d' }}', '{{ cat.tipo }}')"
+                  title="Editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <form method="post" action="{{ url_for('categorias.toggle_categoria', cat_id=cat.id) }}" class="d-inline">
+            <button type="submit" class="btn btn-xs {{ 'btn-outline-warning' if cat.activo else 'btn-outline-success' }} btn-icon"
+                    title="{{ 'Desactivar' if cat.activo else 'Activar' }}">
+              <i class="bi bi-{{ 'eye-slash' if cat.activo else 'eye' }}"></i>
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('categorias.eliminar_categoria', cat_id=cat.id) }}" class="d-inline"
+                onsubmit="return confirm('¿Eliminar la categoría {{ cat.nombre|e }}?')">
+            <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </form>
+          <button class="btn btn-xs btn-outline-secondary btn-icon"
+                  onclick="openSubModal('{{ cat.id }}')"
+                  title="Agregar subcategoría">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      {% if subs %}
+      <div class="cat-body">
+        {% for sub in subs %}
+        <div class="sub-item">
+          <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-arrow-return-right text-muted" style="font-size:.75rem"></i>
+            <span class="{{ 'text-muted text-decoration-line-through' if not sub.activo }}">{{ sub.nombre }}</span>
+            {% if not sub.activo %}
+            <span class="badge bg-secondary" style="font-size:.62rem">Inactiva</span>
+            {% endif %}
+          </span>
+          <div class="d-flex gap-1">
+            <button class="btn btn-xs btn-outline-primary btn-icon"
+                    data-bs-toggle="modal" data-bs-target="#modalEditSub"
+                    onclick="fillEditSub({{ sub.id }}, '{{ sub.nombre|e }}')"
+                    title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <form method="post" action="{{ url_for('categorias.toggle_subcategoria', sub_id=sub.id) }}" class="d-inline">
+              <button type="submit" class="btn btn-xs {{ 'btn-outline-warning' if sub.activo else 'btn-outline-success' }} btn-icon"
+                      title="{{ 'Desactivar' if sub.activo else 'Activar' }}">
+                <i class="bi bi-{{ 'eye-slash' if sub.activo else 'eye' }}"></i>
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('categorias.eliminar_subcategoria', sub_id=sub.id) }}" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar subcategoría {{ sub.nombre|e }}?')">
+              <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="cat-body text-muted" style="font-size:.83rem;padding:.625rem 1.125rem">
+        Sin subcategorías. <button class="btn btn-link p-0" style="font-size:.83rem"
+          onclick="openSubModal('{{ cat.id }}')">
+          Agregar subcategoría
+        </button>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-tags"></i>
+      <h5>Sin categorías</h5>
+      <p>Creá la primera categoría para empezar a registrar gastos.</p>
+      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
+        <i class="bi bi-plus me-1"></i>Nueva Categoría
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Columna derecha: info #}
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>Información</div>
+      <div class="card-body" style="font-size:.875rem">
+        <p class="text-muted">Las categorías se usan para clasificar los <strong>gastos</strong>.</p>
+        <p class="text-muted mb-0">Las <strong>subcategorías</strong> son opcionales y se seleccionan en cascada al crear un gasto.</p>
+        <hr>
+        {% set ns = namespace(activas=0, total_subs=0) %}
+        {% for item in cats_con_subs %}
+          {% if item.cat.activo %}{% set ns.activas = ns.activas + 1 %}{% endif %}
+          {% set ns.total_subs = ns.total_subs + item.subs|length %}
+        {% endfor %}
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">Categorías activas:</span>
+          <strong>{{ ns.activas }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mt-1">
+          <span class="text-muted">Total categorías:</span>
+          <strong>{{ cats_con_subs | length }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mt-1">
+          <span class="text-muted">Total subcategorías:</span>
+          <strong>{{ ns.total_subs }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header fw-bold"><i class="bi bi-palette me-2 text-primary"></i>Colores disponibles</div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% for c in colores %}
+          <span class="color-dot" style="background:{{ c }};width:22px;height:22px;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"
+                title="{{ c }}"></span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ══ MODALES ══════════════════════════════════════════════════════ #}
+
+{# Modal nueva categoría #}
+<div class="modal fade" id="modalNuevaCat" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('categorias.nueva_categoria') }}">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-tags me-2 text-primary"></i>Nueva Categoría</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control" placeholder="Ej: Sueldos, Servicios, Alquiler..." required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" class="form-select">
+              <option value="gasto">Gasto</option>
+              <option value="ingreso">Ingreso</option>
+              <option value="ambos">Ambos</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Color</label>
+            <div class="d-flex align-items-center gap-3">
+              <input type="color" name="color" id="colorPickerNueva" class="form-control form-control-color" value="#4361ee" style="width:50px;height:38px">
+              <div class="d-flex flex-wrap gap-2">
+                {% for c in colores %}
+                <span onclick="document.getElementById('colorPickerNueva').value='{{ c }}'"
+                      style="width:24px;height:24px;background:{{ c }};border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Categoría</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Modal editar categoría #}
+<div class="modal fade" id="modalEditCat" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="formEditCat" action="">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar Categoría</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" id="editCatNombre" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" id="editCatTipo" class="form-select">
+              <option value="gasto">Gasto</option>
+              <option value="ingreso">Ingreso</option>
+              <option value="ambos">Ambos</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Color</label>
+            <div class="d-flex align-items-center gap-3">
+              <input type="color" name="color" id="editCatColor" class="form-control form-control-color" style="width:50px;height:38px">
+              <div class="d-flex flex-wrap gap-2">
+                {% for c in colores %}
+                <span onclick="document.getElementById('editCatColor').value='{{ c }}'"
+                      style="width:24px;height:24px;background:{{ c }};border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Modal nueva subcategoría #}
+<div class="modal fade" id="modalNuevaSub" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="formNuevaSub" action="">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-diagram-2 me-2 text-primary"></i>Nueva Subcategoría</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="dummy" value="1">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" id="newSubNombre" class="form-control"
+                   placeholder="Ej: Electricidad, Gas, Internet..." required autofocus>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Subcategoría</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Modal editar subcategoría #}
+<div class="modal fade" id="modalEditSub" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="formEditSub" action="">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar Subcategoría</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" id="editSubNombre" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<input type="hidden" id="subCatId" value="">
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillEditCat(id, nombre, color, tipo) {
+  document.getElementById('formEditCat').action = '/categorias/' + id + '/editar';
+  document.getElementById('editCatNombre').value = nombre;
+  document.getElementById('editCatColor').value  = color;
+  document.getElementById('editCatTipo').value   = tipo;
+}
+function fillEditSub(id, nombre) {
+  document.getElementById('formEditSub').action   = '/categorias/subcategoria/' + id + '/editar';
+  document.getElementById('editSubNombre').value  = nombre;
+}
+function openSubModal(catId) {
+  document.getElementById('formNuevaSub').action = '/categorias/' + catId + '/subcategoria/nueva';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevaSub')).show();
+}
+</script>
+{% endblock %}

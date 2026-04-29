@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Gastos{% endblock %}
+{% block page_title %}Gastos{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-danger btn-sm">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo Gasto
+</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Filtros ─────────────────────────────────────── #}
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">Desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Local</label>
+      <select name="local_id" class="form-select">
+        <option value="">Todos</option>
+        {% for l in locales %}
+        <option value="{{ l.id }}" {{ 'selected' if local_id == l.id|string }}>{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Categoría</label>
+      <select name="categoria_id" class="form-select">
+        <option value="">Todas</option>
+        {% for c in categorias %}
+        <option value="{{ c.id }}" {{ 'selected' if categoria_id == c.id|string }}>{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Proveedor</label>
+      <select name="proveedor_id" class="form-select">
+        <option value="">Todos</option>
+        {% for p in proveedores %}
+        <option value="{{ p.id }}" {{ 'selected' if proveedor_id == p.id|string }}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+      <a href="{{ url_for('gastos.list_gastos') }}" class="btn btn-outline-secondary btn-icon">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+  <div class="mt-2 d-flex align-items-center gap-3">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="mostrar_anulados" id="chkAnul" value="1"
+             {{ 'checked' if mostrar_anulados == '1' }} onchange="this.form.submit()">
+      <label class="form-check-label" for="chkAnul" style="font-size:.82rem">Mostrar anulados</label>
+    </div>
+    {% if total_filtrado > 0 %}
+    <span class="ms-auto fw-bold amount-expense" style="font-size:.95rem">
+      Total: {{ moneda }} {{ "{:,.2f}".format(total_filtrado).replace(",","X").replace(".",",").replace("X",".") }}
+    </span>
+    {% endif %}
+  </div>
+</form>
+
+{# ── Tabla de gastos ─────────────────────────────── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span>
+      <i class="bi bi-arrow-down-circle-fill text-danger me-2"></i>
+      {{ gastos|length }} gasto{{ 's' if gastos|length != 1 }}
+    </span>
+    {% if gastos %}
+    <span class="text-muted" style="font-size:.82rem">
+      Haz clic en <i class="bi bi-pencil"></i> para editar
+    </span>
+    {% endif %}
+  </div>
+
+  {% if gastos %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Local</th>
+          <th>Categoría</th>
+          <th>Subcategoría</th>
+          <th>Proveedor</th>
+          <th>Descripción</th>
+          <th>Medio de pago</th>
+          <th class="text-end">Monto</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in gastos %}
+        <tr class="{{ 'row-anulado' if g.anulado }}">
+          <td class="text-nowrap">{{ g.fecha }}</td>
+          <td>{{ g.local_nombre }}</td>
+          <td>
+            <span class="badge-expense">{{ g.categoria_nombre }}</span>
+          </td>
+          <td>{{ g.subcategoria_nombre or '—' }}</td>
+          <td>{{ g.proveedor_nombre or '—' }}</td>
+          <td class="text-truncate" style="max-width:180px" title="{{ g.descripcion or '' }}">
+            {{ g.descripcion or '—' }}
+          </td>
+          <td>
+            {% if g.medio_pago %}
+            <span class="badge bg-light text-secondary border" style="font-size:.75rem">
+              {{ g.medio_pago }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end text-nowrap amount-expense fw-bold">
+            {{ moneda }} {{ "{:,.2f}".format(g.monto).replace(",","X").replace(".",",").replace("X",".") }}
+          </td>
+          <td class="text-center text-nowrap">
+            {% if not g.anulado %}
+            <a href="{{ url_for('gastos.editar_gasto', gasto_id=g.id) }}"
+               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{{ url_for('gastos.anular_gasto', gasto_id=g.id) }}"
+                  class="d-inline" onsubmit="return confirmarAnular(this)">
+              <button type="submit" class="btn btn-xs btn-outline-warning btn-icon" title="Anular">
+                <i class="bi bi-slash-circle"></i>
+              </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('gastos.eliminar_gasto', gasto_id=g.id) }}"
+                  class="d-inline"
+                  onsubmit="confirmarEliminar(event, this, '{{ g.descripcion or 'este gasto' }}')">
+              <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="table-light fw-bold">
+          <td colspan="7" class="text-end">Total visible:</td>
+          <td class="text-end text-nowrap amount-expense">
+            {{ moneda }} {{ "{:,.2f}".format(total_filtrado).replace(",","X").replace(".",",").replace("X",".") }}
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-arrow-down-circle"></i>
+    <h5>Sin gastos registrados</h5>
+    <p>No hay gastos con los filtros aplicados.</p>
+    <a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-danger btn-sm">
+      <i class="bi bi-plus me-1"></i>Registrar primer gasto
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarEliminar(e, form, nombre) {
+  e.preventDefault();
+  if (confirm('¿Eliminar definitivamente "' + nombre + '"?\nEsta acción no se puede deshacer.')) {
+    form.submit();
+  }
+}
+</script>
+{% endblock %}

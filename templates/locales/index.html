@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Locales{% endblock %}
+{% block page_title %}Locales{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoLocal">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo Local
+</button>
+{% endblock %}
+
+{% block content %}
+
+{% if locales %}
+<div class="row g-3">
+  {% for local in locales %}
+  {% set s = stats.get(local.id, {}) %}
+  <div class="col-12 col-sm-6 col-xl-4">
+    <div class="local-card">
+      <div class="local-card-header {{ '' if local.activo else 'inactive' }}">
+        <div>
+          <div class="local-name">
+            <i class="bi bi-shop-window me-2"></i>{{ local.nombre }}
+          </div>
+          {% if local.descripcion %}
+          <div style="font-size:.78rem;color:rgba(255,255,255,.7);margin-top:2px">
+            {{ local.descripcion }}
+          </div>
+          {% endif %}
+        </div>
+        <span class="local-badge {{ 'bg-success text-white' if local.activo else 'bg-secondary text-white' }}">
+          {{ 'Activo' if local.activo else 'Inactivo' }}
+        </span>
+      </div>
+      <div class="local-body">
+        <div class="local-stat">
+          <span class="local-stat-label"><i class="bi bi-arrow-up-circle me-1 text-success"></i>Ingresos totales</span>
+          <span class="fw-bold amount-income">
+            {{ moneda }} {{ "{:,.2f}".format(s.get('ingresos', 0)).replace(",","X").replace(".",",").replace("X",".") }}
+          </span>
+        </div>
+        <div class="local-stat">
+          <span class="local-stat-label"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>Gastos totales</span>
+          <span class="fw-bold amount-expense">
+            {{ moneda }} {{ "{:,.2f}".format(s.get('gastos', 0)).replace(",","X").replace(".",",").replace("X",".") }}
+          </span>
+        </div>
+        <div class="local-stat" style="border-top:1px solid #e2e8f0;padding-top:.5rem;margin-top:.25rem">
+          <span class="local-stat-label fw-bold">Balance</span>
+          {% set bal = s.get('balance', 0) %}
+          <span class="fw-bold {{ 'amount-income' if bal >= 0 else 'amount-expense' }}">
+            {{ moneda }} {{ "{:,.2f}".format(bal|abs).replace(",","X").replace(".",",").replace("X",".") }}
+            {{ '↑' if bal >= 0 else '↓' }}
+          </span>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary flex-fill"
+                  data-bs-toggle="modal" data-bs-target="#modalEditLocal"
+                  onclick="fillEditLocal({{ local.id }}, '{{ local.nombre|e }}', '{{ (local.descripcion or '')|e }}')">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </button>
+          <form method="post" action="{{ url_for('locales.toggle_local', local_id=local.id) }}" class="flex-fill">
+            <button type="submit" class="btn btn-sm {{ 'btn-outline-warning' if local.activo else 'btn-outline-success' }} w-100">
+              <i class="bi bi-{{ 'eye-slash' if local.activo else 'eye' }} me-1"></i>
+              {{ 'Desactivar' if local.activo else 'Activar' }}
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('locales.eliminar_local', local_id=local.id) }}"
+                onsubmit="return confirm('¿Eliminar el local {{ local.nombre|e }}?')">
+            <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="Eliminar">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="padding:4rem 1rem">
+  <i class="bi bi-shop-window"></i>
+  <h5>Sin locales</h5>
+  <p>Creá el primer local para empezar a registrar movimientos.</p>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoLocal">
+    <i class="bi bi-plus me-1"></i>Crear primer local
+  </button>
+</div>
+{% endif %}
+
+{# ══ MODALES ════════════════════════════════════════════════════ #}
+
+{# Modal nuevo local #}
+<div class="modal fade" id="modalNuevoLocal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('locales.nuevo_local') }}">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-shop-window me-2 text-primary"></i>Nuevo Local</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control"
+                   placeholder="Ej: Centro, Palermo, Quilmes..." required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <input type="text" name="descripcion" class="form-control"
+                   placeholder="Dirección, barrio u otra referencia...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Local</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# Modal editar local #}
+<div class="modal fade" id="modalEditLocal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="formEditLocal" action="">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar Local</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" id="editLocalNombre" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <input type="text" name="descripcion" id="editLocalDesc" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillEditLocal(id, nombre, descripcion) {
+  document.getElementById('formEditLocal').action = '/locales/' + id + '/editar';
+  document.getElementById('editLocalNombre').value = nombre;
+  document.getElementById('editLocalDesc').value   = descripcion;
+}
+</script>
+{% endblock %}

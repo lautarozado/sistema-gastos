@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar Ingreso' if modo == 'editar' else 'Nuevo Ingreso' }}{% endblock %}
+{% block page_title %}{{ 'Editar Ingreso' if modo == 'editar' else 'Registrar Ingreso' }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('ingresos.list_ingresos') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Volver
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8 col-xl-7">
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <div style="width:32px;height:32px;background:#ecfdf5;border-radius:8px;
+                    display:flex;align-items:center;justify-content:center;color:#10b981;font-size:1rem">
+          <i class="bi bi-arrow-up-circle-fill"></i>
+        </div>
+        <span class="fw-bold">{{ 'Editar ingreso' if modo == 'editar' else 'Nuevo ingreso' }}</span>
+      </div>
+
+      <div class="card-body">
+        <form method="post" id="formIngreso" novalidate>
+
+          <div class="row g-3">
+            {# Período #}
+            <div class="col-sm-6">
+              <label class="form-label" for="fecha_desde">Fecha desde <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_desde" id="fecha_desde" class="form-control"
+                     value="{{ ingreso.fecha_desde or '' }}" required>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="fecha_hasta">Fecha hasta <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control"
+                     value="{{ ingreso.fecha_hasta or '' }}" required>
+            </div>
+
+            {# Local #}
+            <div class="col-sm-6">
+              <label class="form-label" for="local_id">Local <span class="text-danger">*</span></label>
+              <select name="local_id" id="local_id" class="form-select" required>
+                <option value="">— Seleccionar local —</option>
+                {% for l in locales %}
+                <option value="{{ l.id }}"
+                  {{ 'selected' if ingreso.local_id|string == l.id|string }}>
+                  {{ l.nombre }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Total #}
+            <div class="col-sm-6">
+              <label class="form-label" for="total">Total ingresado <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text fw-bold text-success">{{ moneda }}</span>
+                <input type="text" inputmode="decimal" name="total" id="total" class="form-control"
+                       placeholder="0,00" autocomplete="off"
+                       value="{{ ingreso.total or '' }}" required>
+              </div>
+            </div>
+
+            {# Observaciones #}
+            <div class="col-12">
+              <label class="form-label" for="observaciones">Observaciones</label>
+              <input type="text" name="observaciones" id="observaciones" class="form-control"
+                     placeholder="Semana alta, feriado, etc..."
+                     value="{{ ingreso.observaciones or '' }}" maxlength="200">
+            </div>
+          </div>
+
+          {# ── Medios de cobro ───────────────────────── #}
+          <hr class="my-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="mb-0 fw-bold">
+              <i class="bi bi-credit-card me-2 text-primary"></i>Detalle por medio de cobro
+            </h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="distribuirEnEfectivo()"
+                    title="Poner todo en efectivo">
+              <i class="bi bi-lightning-charge me-1"></i>Todo en efectivo
+            </button>
+          </div>
+
+          <div class="payment-grid mb-2">
+            {% set icons = {'efectivo': 'bi-cash-coin', 'transferencia': 'bi-bank',
+                            'tarjeta': 'bi-credit-card', 'mercado_pago': 'bi-phone', 'otro': 'bi-three-dots'} %}
+            {% set colors = {'efectivo': '#10b981', 'transferencia': '#4361ee',
+                             'tarjeta': '#f59e0b', 'mercado_pago': '#06b6d4', 'otro': '#8b5cf6'} %}
+            {% for codigo, label in medios_cobro %}
+            <div class="payment-row">
+              <div class="payment-icon"
+                   style="background:{{ colors.get(codigo,'#e2e8f0') }}20;color:{{ colors.get(codigo,'#6c757d') }}">
+                <i class="bi {{ icons.get(codigo, 'bi-cash') }}"></i>
+              </div>
+              <span class="payment-label">{{ label }}</span>
+              <div class="input-group payment-input">
+                <span class="input-group-text" style="font-size:.8rem">{{ moneda }}</span>
+                <input type="text" inputmode="decimal"
+                       name="medio_{{ codigo }}"
+                       id="medio_{{ codigo }}"
+                       class="form-control medio-monto"
+                       placeholder="0,00" autocomplete="off"
+                       value="{{ medios_vals.get(codigo, 0) if medios_vals.get(codigo, 0) else '' }}">
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div id="paymentSummary" class="mt-2 p-2 rounded" style="background:#f1f5f9;font-size:.86rem">
+            Ingresá el total y los medios de cobro para ver la validación.
+          </div>
+
+          <hr class="my-4">
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('ingresos.list_ingresos') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Cancelar
+            </a>
+            <button type="submit" class="btn btn-success px-4" id="submitIngreso">
+              <i class="bi bi-check-lg me-1"></i>
+              {{ 'Guardar cambios' if modo == 'editar' else 'Registrar ingreso' }}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    {% if not locales %}
+    <div class="alert alert-warning mt-3">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      No hay locales activos. <a href="{{ url_for('locales.index') }}">Creá uno aquí</a>.
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Formateo de todos los inputs de monto
+  initMontoInput('total');
+  document.querySelectorAll('.medio-monto').forEach(function(inp) { initMontoInput(inp); });
+
+  initPaymentValidation();
+
+  document.getElementById('formIngreso').addEventListener('submit', function(e) {
+    var totalEl = document.getElementById('total');
+    var total = parseFloat(montoToMachine(totalEl.value)) || 0;
+
+    if (!total || total <= 0) {
+      e.preventDefault();
+      alert('El total debe ser mayor a cero.');
+      totalEl.focus();
+      return;
+    }
+
+    var suma = 0;
+    document.querySelectorAll('.medio-monto').forEach(function(i){
+      suma += parseFloat(montoToMachine(i.value)) || 0;
+    });
+
+    if (Math.abs(suma - total) > 0.01) {
+      e.preventDefault();
+      alert('La suma de los medios de cobro (' + fmtMoney(suma) + ') no coincide con el total (' + fmtMoney(total) + ').\nCorregí los valores antes de guardar.');
+      return;
+    }
+
+    // Todo OK: normalizar a formato de máquina antes de enviar
+    totalEl.value = montoToMachine(totalEl.value);
+    document.querySelectorAll('.medio-monto').forEach(function(inp) {
+      inp.value = montoToMachine(inp.value) || '0';
+    });
+  });
+});
+</script>
+{% endblock %}

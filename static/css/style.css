@@ -162,6 +162,7 @@ a:hover{color:var(--primary-dark)}
   box-shadow:var(--card-shadow);
   background:var(--card-bg);
   transition:box-shadow var(--tr);
+  overflow:hidden;
 }
 .card-header{
   background:#f8fafc;
@@ -226,7 +227,7 @@ a:hover{color:var(--primary-dark)}
 }
 .table tbody tr:last-child td{border-bottom:none}
 .table tbody tr:hover td{background:#fafbfc}
-.table-responsive{border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+.table-responsive{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 /* Badges tipo */
 .badge-income{
@@ -461,6 +462,15 @@ textarea.form-control{resize:vertical;min-height:80px}
 
   /* Filter card más compacto */
   .filter-card{padding:.75rem}
+
+  /* FAB clearance — last card shouldn't hide behind FAB */
+  .main-content{padding-bottom:5rem}
+
+  /* Table cell padding reducido */
+  .table th,.table td{padding:.5rem .6rem}
+
+  /* Page title truncation */
+  .page-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55vw}
 }
 
 @media (max-width:380px){

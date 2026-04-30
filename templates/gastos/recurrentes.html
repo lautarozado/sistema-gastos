@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Gastos Recurrentes{% endblock %}
+{% block page_title %}Gastos Recurrentes{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('gastos.list_gastos') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Volver
+</a>
+<a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-danger btn-sm">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo Gasto
+</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span>
+      <i class="bi bi-arrow-repeat me-2 text-info"></i>
+      {{ gastos|length }} gasto{{ 's' if gastos|length != 1 }} recurrente{{ 's' if gastos|length != 1 }}
+    </span>
+    <span class="text-muted" style="font-size:.82rem">
+      Solo activos — no se crean automáticamente
+    </span>
+  </div>
+
+  {% if gastos %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th class="d-none d-sm-table-cell">Local</th>
+          <th class="d-none d-md-table-cell">Categoría</th>
+          <th class="text-center">Frecuencia</th>
+          <th class="text-center">Próxima fecha</th>
+          <th class="text-center">Estado</th>
+          <th class="text-end">Monto</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in gastos %}
+        <tr>
+          <td>
+            <span class="fw-semibold">{{ g.descripcion or '—' }}</span>
+          </td>
+          <td class="d-none d-sm-table-cell">{{ g.local_nombre }}</td>
+          <td class="d-none d-md-table-cell">{{ g.categoria_nombre }}</td>
+          <td class="text-center">
+            {% if g.frecuencia %}
+            <span class="badge bg-light text-secondary border" style="font-size:.78rem">
+              {{ g.frecuencia|capitalize }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-center text-nowrap">
+            {% if g.proxima_fecha %}
+            {{ g.proxima_fecha|fmt_date }}
+            {% else %}<span class="text-muted">Sin fecha</span>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if not g.proxima_fecha %}
+            <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.72rem">Sin fecha</span>
+            {% elif g.proxima_fecha < hoy %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:.72rem">Vencido</span>
+            {% elif g.proxima_fecha <= hoy_7d %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size:.72rem">Próximo</span>
+            {% else %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.72rem">Programado</span>
+            {% endif %}
+          </td>
+          <td class="text-end text-nowrap amount-expense fw-bold">
+            {{ moneda }} {{ "{:,.2f}".format(g.monto).replace(",","X").replace(".",",").replace("X",".") }}
+            {% if g.moneda == 'USD' %}<br><span class="badge bg-warning text-dark" style="font-size:.65rem">USD</span>{% endif %}
+          </td>
+          <td class="text-center text-nowrap">
+            <a href="{{ url_for('gastos.editar_gasto', gasto_id=g.id) }}"
+               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-arrow-repeat"></i>
+    <h5>Sin gastos recurrentes</h5>
+    <p>Al registrar un gasto podés marcarlo como recurrente.</p>
+    <a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-danger btn-sm">
+      <i class="bi bi-plus me-1"></i>Nuevo Gasto
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+

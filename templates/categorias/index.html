@@ -44,7 +44,7 @@
             </button>
           </form>
           <form method="post" action="{{ url_for('categorias.eliminar_categoria', cat_id=cat.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Eliminar la categoría {{ cat.nombre|e }}?')">
+                onsubmit="return confirm('¿Seguro que querés eliminar la categoría &quot;{{ cat.nombre|e }}&quot;?\nEsta acción no se puede deshacer.')">
             <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
               <i class="bi bi-trash3"></i>
             </button>
@@ -82,7 +82,7 @@
               </button>
             </form>
             <form method="post" action="{{ url_for('categorias.eliminar_subcategoria', sub_id=sub.id) }}" class="d-inline"
-                  onsubmit="return confirm('¿Eliminar subcategoría {{ sub.nombre|e }}?')">
+                  onsubmit="return confirm('¿Seguro que querés eliminar la subcategoría &quot;{{ sub.nombre|e }}&quot;?\nEsta acción no se puede deshacer.')">
               <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
                 <i class="bi bi-trash3"></i>
               </button>
@@ -119,8 +119,8 @@
     <div class="card">
       <div class="card-header fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>Información</div>
       <div class="card-body" style="font-size:.875rem">
-        <p class="text-muted">Las categorías se usan para clasificar los <strong>gastos</strong>.</p>
-        <p class="text-muted mb-0">Las <strong>subcategorías</strong> son opcionales y se seleccionan en cascada al crear un gasto.</p>
+        <p class="text-muted">Las categorías clasifican <strong>gastos</strong> e <strong>ingresos</strong> según su tipo.</p>
+        <p class="text-muted mb-0">Las <strong>subcategorías</strong> son opcionales y aplican solo a gastos.</p>
         <hr>
         {% set ns = namespace(activas=0, total_subs=0) %}
         {% for item in cats_con_subs %}

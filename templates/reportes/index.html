@@ -98,7 +98,7 @@
   {% set bal = data.balance %}
   <div class="col-6 col-lg-3">
     <div class="report-box">
-      <div class="label"><i class="bi bi-wallet2 me-1 text-primary"></i>Balance Neto</div>
+      <div class="label"><i class="bi bi-cash-stack me-1 text-primary"></i>Balance Neto</div>
       <div class="value {{ 'text-success' if bal >= 0 else 'text-danger' }}">
         {{ moneda }} {{ "{:,.2f}".format(bal|abs).replace(",","X").replace(".",",").replace("X",".") }}
         {{ '▲' if bal >= 0 else '▼' }}
@@ -108,8 +108,8 @@
   <div class="col-6 col-lg-3">
     <div class="report-box">
       <div class="label"><i class="bi bi-calendar3 me-1 text-secondary"></i>Período</div>
-      <div class="value" style="font-size:.95rem">{{ fecha_desde }}</div>
-      <div class="text-muted" style="font-size:.78rem;margin-top:.15rem">al {{ fecha_hasta }}</div>
+      <div class="value" style="font-size:.95rem">{{ fecha_desde|fmt_date }}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-top:.15rem">al {{ fecha_hasta|fmt_date }}</div>
     </div>
   </div>
 </div>

@@ -67,7 +67,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
             FROM gastos g JOIN categorias c ON g.categoria_id = c.id
             JOIN locales l ON g.local_id = l.id
             WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}
-            GROUP BY c.id ORDER BY total DESC''', gp
+            GROUP BY c.id, c.nombre, c.color ORDER BY total DESC''', gp
     ).fetchall()
 
     gastos_por_proveedor = db.execute(
@@ -76,21 +76,21 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
             FROM gastos g LEFT JOIN proveedores p ON g.proveedor_id = p.id
             JOIN locales l ON g.local_id = l.id
             WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}
-            GROUP BY g.proveedor_id ORDER BY total DESC''', gp
+            GROUP BY g.proveedor_id, p.nombre ORDER BY total DESC''', gp
     ).fetchall()
 
     ingresos_por_local = db.execute(
         f'''SELECT l.nombre, COALESCE(SUM(i.total), 0) as total, COUNT(*) as cantidad
             FROM ingresos i JOIN locales l ON i.local_id = l.id
             WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
-            GROUP BY l.id ORDER BY total DESC''', ip
+            GROUP BY l.id, l.nombre ORDER BY total DESC''', ip
     ).fetchall()
 
     gastos_por_local = db.execute(
         f'''SELECT l.nombre, COALESCE(SUM(g.monto), 0) as total, COUNT(*) as cantidad
             FROM gastos g JOIN locales l ON g.local_id = l.id
             WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}
-            GROUP BY l.id ORDER BY total DESC''', gp
+            GROUP BY l.id, l.nombre ORDER BY total DESC''', gp
     ).fetchall()
 
     medios_cobro_data = db.execute(
@@ -116,8 +116,11 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
     ).fetchall()
 
     detalle_ingresos = db.execute(
-        f'''SELECT i.fecha_desde, i.fecha_hasta, l.nombre as local, i.total, i.observaciones
-            FROM ingresos i JOIN locales l ON i.local_id = l.id
+        f'''SELECT i.fecha_desde, i.fecha_hasta, l.nombre as local,
+                   COALESCE(cat.nombre, '') as categoria, i.total, i.observaciones
+            FROM ingresos i
+            JOIN locales l ON i.local_id = l.id
+            LEFT JOIN categorias cat ON i.categoria_id = cat.id
             WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
             ORDER BY i.fecha_desde DESC''', ip
     ).fetchall()

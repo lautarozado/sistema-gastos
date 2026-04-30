@@ -6,36 +6,25 @@ bp = Blueprint('ingresos', __name__, url_prefix='/ingresos')
 
 
 def parse_monto(valor):
-    """
-    Convierte montos en formato argentino a float.
-
-    Ejemplos:
-    "1.000.000" -> 1000000.0
-    "1.000.000,50" -> 1000000.50
-    "1000000" -> 1000000.0
-    "$ 1.000.000,50" -> 1000000.50
-    """
+    """Convierte montos en formato argentino a float."""
     if valor is None:
         return 0.0
-
-    valor = str(valor).strip()
-    valor = valor.replace('$', '')
-    valor = valor.replace(' ', '')
-
+    valor = str(valor).strip().replace('$', '').replace(' ', '')
     if not valor:
         return 0.0
-
-    # Formato argentino: 1.000.000,50
     if ',' in valor:
-        valor = valor.replace('.', '')
-        valor = valor.replace(',', '.')
+        valor = valor.replace('.', '').replace(',', '.')
     else:
-        # Si tiene puntos y parecen separadores de miles: 1.000.000
         partes = valor.split('.')
         if len(partes) > 1 and all(len(p) == 3 for p in partes[1:]):
             valor = ''.join(partes)
-
     return float(valor)
+
+
+def _get_categorias_ingreso(db):
+    return db.execute(
+        "SELECT * FROM categorias WHERE tipo IN ('ingreso', 'ambos') AND activo = 1 ORDER BY nombre"
+    ).fetchall()
 
 
 @bp.route('/')
@@ -49,9 +38,12 @@ def list_ingresos():
 
     query = '''
         SELECT i.id, i.fecha_desde, i.fecha_hasta, i.total, i.observaciones, i.anulado,
-               l.nombre as local_nombre
+               COALESCE(i.moneda, 'ARS') as moneda,
+               l.nombre as local_nombre,
+               cat.nombre as categoria_nombre
         FROM ingresos i
         JOIN locales l ON i.local_id = l.id
+        LEFT JOIN categorias cat ON i.categoria_id = cat.id
         WHERE 1=1
     '''
     params = []
@@ -71,7 +63,9 @@ def list_ingresos():
     query += ' ORDER BY i.fecha_desde DESC, i.created_at DESC'
 
     ingresos = db.execute(query, params).fetchall()
-    total_filtrado = sum(i['total'] for i in ingresos if not i['anulado'])
+    total_ars = sum(i['total'] for i in ingresos if not i['anulado'] and i['moneda'] == 'ARS')
+    total_usd = sum(i['total'] for i in ingresos if not i['anulado'] and i['moneda'] == 'USD')
+    total_filtrado = total_ars
 
     locales = db.execute('SELECT * FROM locales WHERE activo = 1 ORDER BY nombre').fetchall()
     db.close()
@@ -81,6 +75,8 @@ def list_ingresos():
         ingresos=ingresos,
         locales=locales,
         total_filtrado=total_filtrado,
+        total_ars=total_ars,
+        total_usd=total_usd,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
         local_id=local_id,
@@ -93,27 +89,32 @@ def list_ingresos():
 def nuevo_ingreso():
     db = get_db()
     locales = db.execute('SELECT * FROM locales WHERE activo = 1 ORDER BY nombre').fetchall()
+    categorias = _get_categorias_ingreso(db)
 
     if request.method == 'POST':
-        fecha_desde = request.form.get('fecha_desde', '').strip()
-        fecha_hasta = request.form.get('fecha_hasta', '').strip()
-        local_id = request.form.get('local_id', '').strip()
-        total_str = request.form.get('total', '').strip()
-        observaciones = request.form.get('observaciones', '').strip()
+        fecha_desde    = request.form.get('fecha_desde', '').strip()
+        fecha_hasta    = request.form.get('fecha_hasta', '').strip()
+        local_id       = request.form.get('local_id', '').strip()
+        categoria_id   = request.form.get('categoria_id', '').strip() or None
+        total_str      = request.form.get('total', '').strip()
+        observaciones  = request.form.get('observaciones', '').strip()
+        moneda         = request.form.get('moneda', 'ARS').strip()
+
+        if moneda not in ('ARS', 'USD'):
+            moneda = 'ARS'
 
         errors = []
 
         if not fecha_desde:
             errors.append('La fecha desde es obligatoria.')
-
         if not fecha_hasta:
             errors.append('La fecha hasta es obligatoria.')
-
         if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:
             errors.append('La fecha desde no puede ser posterior a la fecha hasta.')
-
         if not local_id:
             errors.append('El local es obligatorio.')
+        if not categoria_id:
+            errors.append('La categoría es obligatoria.')
 
         try:
             total = parse_monto(total_str)
@@ -123,22 +124,17 @@ def nuevo_ingreso():
             errors.append('El total ingresado no es válido.')
             total = 0.0
 
-        # Medios de cobro
         medios_data = {}
         suma_medios = 0.0
-
         for codigo, _ in MEDIOS_COBRO:
             val_str = request.form.get(f'medio_{codigo}', '0').strip()
-
             try:
                 val = parse_monto(val_str)
             except (ValueError, AttributeError):
                 val = 0.0
-
             if val < 0:
                 errors.append(f'El monto de {codigo} no puede ser negativo.')
                 val = 0.0
-
             medios_data[codigo] = val
             suma_medios += val
 
@@ -152,29 +148,26 @@ def nuevo_ingreso():
         if errors:
             for e in errors:
                 flash(e, 'danger')
-
             db.close()
-
             return render_template(
                 'ingresos/form.html',
                 locales=locales,
+                categorias=categorias,
                 medios_cobro=MEDIOS_COBRO,
                 ingreso=request.form,
                 medios_vals=medios_data,
-                modo='nuevo'
+                modo='nuevo',
             )
 
         cur = db.execute(
-            '''INSERT INTO ingresos (fecha_desde, fecha_hasta, local_id, total, observaciones)
-               VALUES (?, ?, ?, ?, ?)''',
-            (fecha_desde, fecha_hasta, local_id, total, observaciones)
+            '''INSERT INTO ingresos (fecha_desde, fecha_hasta, local_id, categoria_id, total, observaciones, moneda)
+               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+            (fecha_desde, fecha_hasta, local_id, categoria_id, total, observaciones, moneda)
         )
-
         ingreso_id = cur.lastrowid
 
         for codigo, _ in MEDIOS_COBRO:
             monto_medio = medios_data.get(codigo, 0.0)
-
             if monto_medio > 0:
                 db.execute(
                     'INSERT INTO detalle_ingresos_medios (ingreso_id, medio, monto) VALUES (?, ?, ?)',
@@ -183,62 +176,59 @@ def nuevo_ingreso():
 
         db.commit()
         db.close()
-
         flash('Ingreso registrado correctamente.', 'success')
         return redirect(url_for('ingresos.list_ingresos'))
 
     hoy = date.today().strftime('%Y-%m-%d')
     db.close()
-
     return render_template(
         'ingresos/form.html',
         locales=locales,
+        categorias=categorias,
         medios_cobro=MEDIOS_COBRO,
-        ingreso={
-            'fecha_desde': hoy,
-            'fecha_hasta': hoy
-        },
+        ingreso={'fecha_desde': hoy, 'fecha_hasta': hoy},
         medios_vals={},
-        modo='nuevo'
+        modo='nuevo',
     )
 
 
 @bp.route('/<int:ingreso_id>/editar', methods=['GET', 'POST'])
 def editar_ingreso(ingreso_id):
     db = get_db()
-
-    ingreso = db.execute(
-        'SELECT * FROM ingresos WHERE id = ?',
-        (ingreso_id,)
-    ).fetchone()
+    ingreso = db.execute('SELECT * FROM ingresos WHERE id = ?', (ingreso_id,)).fetchone()
 
     if not ingreso:
         flash('Ingreso no encontrado.', 'danger')
         db.close()
         return redirect(url_for('ingresos.list_ingresos'))
 
-    locales = db.execute('SELECT * FROM locales WHERE activo = 1 ORDER BY nombre').fetchall()
+    locales    = db.execute('SELECT * FROM locales WHERE activo = 1 ORDER BY nombre').fetchall()
+    categorias = _get_categorias_ingreso(db)
 
     if request.method == 'POST':
-        fecha_desde = request.form.get('fecha_desde', '').strip()
-        fecha_hasta = request.form.get('fecha_hasta', '').strip()
-        local_id = request.form.get('local_id', '').strip()
-        total_str = request.form.get('total', '').strip()
+        fecha_desde   = request.form.get('fecha_desde', '').strip()
+        fecha_hasta   = request.form.get('fecha_hasta', '').strip()
+        local_id      = request.form.get('local_id', '').strip()
+        categoria_id  = request.form.get('categoria_id', '').strip() or None
+        total_str     = request.form.get('total', '').strip()
         observaciones = request.form.get('observaciones', '').strip()
+        moneda        = request.form.get('moneda', 'ARS').strip()
+
+        if moneda not in ('ARS', 'USD'):
+            moneda = 'ARS'
 
         errors = []
 
         if not fecha_desde:
             errors.append('La fecha desde es obligatoria.')
-
         if not fecha_hasta:
             errors.append('La fecha hasta es obligatoria.')
-
         if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:
             errors.append('La fecha desde no puede ser posterior a la fecha hasta.')
-
         if not local_id:
             errors.append('El local es obligatorio.')
+        if not categoria_id:
+            errors.append('La categoría es obligatoria.')
 
         try:
             total = parse_monto(total_str)
@@ -250,19 +240,15 @@ def editar_ingreso(ingreso_id):
 
         medios_data = {}
         suma_medios = 0.0
-
         for codigo, _ in MEDIOS_COBRO:
             val_str = request.form.get(f'medio_{codigo}', '0').strip()
-
             try:
                 val = parse_monto(val_str)
             except (ValueError, AttributeError):
                 val = 0.0
-
             if val < 0:
                 errors.append(f'El monto de {codigo} no puede ser negativo.')
                 val = 0.0
-
             medios_data[codigo] = val
             suma_medios += val
 
@@ -276,39 +262,29 @@ def editar_ingreso(ingreso_id):
         if errors:
             for e in errors:
                 flash(e, 'danger')
-
             db.close()
-
             return render_template(
                 'ingresos/form.html',
                 locales=locales,
+                categorias=categorias,
                 medios_cobro=MEDIOS_COBRO,
                 ingreso=request.form,
                 medios_vals=medios_data,
                 modo='editar',
-                ingreso_id=ingreso_id
+                ingreso_id=ingreso_id,
             )
 
         db.execute(
             '''UPDATE ingresos
-               SET fecha_desde = ?,
-                   fecha_hasta = ?,
-                   local_id = ?,
-                   total = ?,
-                   observaciones = ?,
-                   updated_at = CURRENT_TIMESTAMP
+               SET fecha_desde = ?, fecha_hasta = ?, local_id = ?, categoria_id = ?,
+                   total = ?, observaciones = ?, moneda = ?, updated_at = CURRENT_TIMESTAMP
                WHERE id = ?''',
-            (fecha_desde, fecha_hasta, local_id, total, observaciones, ingreso_id)
+            (fecha_desde, fecha_hasta, local_id, categoria_id, total, observaciones, moneda, ingreso_id)
         )
-
-        db.execute(
-            'DELETE FROM detalle_ingresos_medios WHERE ingreso_id = ?',
-            (ingreso_id,)
-        )
+        db.execute('DELETE FROM detalle_ingresos_medios WHERE ingreso_id = ?', (ingreso_id,))
 
         for codigo, _ in MEDIOS_COBRO:
             monto_medio = medios_data.get(codigo, 0.0)
-
             if monto_medio > 0:
                 db.execute(
                     'INSERT INTO detalle_ingresos_medios (ingreso_id, medio, monto) VALUES (?, ?, ?)',
@@ -317,38 +293,35 @@ def editar_ingreso(ingreso_id):
 
         db.commit()
         db.close()
-
         flash('Ingreso actualizado correctamente.', 'success')
         return redirect(url_for('ingresos.list_ingresos'))
 
     medios_rows = db.execute(
-        'SELECT medio, monto FROM detalle_ingresos_medios WHERE ingreso_id = ?',
-        (ingreso_id,)
+        'SELECT medio, monto FROM detalle_ingresos_medios WHERE ingreso_id = ?', (ingreso_id,)
     ).fetchall()
-
     medios_vals = {r['medio']: r['monto'] for r in medios_rows}
-
     db.close()
 
     return render_template(
         'ingresos/form.html',
         locales=locales,
+        categorias=categorias,
         medios_cobro=MEDIOS_COBRO,
         ingreso=ingreso,
         medios_vals=medios_vals,
         modo='editar',
-        ingreso_id=ingreso_id
+        ingreso_id=ingreso_id,
     )
 
 
 @bp.route('/<int:ingreso_id>/detalle')
 def detalle_ingreso(ingreso_id):
     db = get_db()
-
     ingreso = db.execute(
-        '''SELECT i.*, l.nombre as local_nombre
+        '''SELECT i.*, l.nombre as local_nombre, cat.nombre as categoria_nombre
            FROM ingresos i
            JOIN locales l ON i.local_id = l.id
+           LEFT JOIN categorias cat ON i.categoria_id = cat.id
            WHERE i.id = ?''',
         (ingreso_id,)
     ).fetchone()
@@ -359,32 +332,78 @@ def detalle_ingreso(ingreso_id):
         return redirect(url_for('ingresos.list_ingresos'))
 
     medios = db.execute(
-        'SELECT * FROM detalle_ingresos_medios WHERE ingreso_id = ?',
-        (ingreso_id,)
+        'SELECT * FROM detalle_ingresos_medios WHERE ingreso_id = ?', (ingreso_id,)
     ).fetchall()
-
     db.close()
 
     return render_template(
         'ingresos/detalle.html',
         ingreso=ingreso,
         medios=medios,
-        medios_cobro=MEDIOS_COBRO
+        medios_cobro=MEDIOS_COBRO,
     )
+
+
+@bp.route('/exportar-csv')
+def exportar_csv():
+    import csv, io
+    from flask import Response
+
+    db = get_db()
+    fecha_desde      = request.args.get('fecha_desde', '')
+    fecha_hasta      = request.args.get('fecha_hasta', '')
+    local_id         = request.args.get('local_id', '')
+    mostrar_anulados = request.args.get('mostrar_anulados', '0')
+
+    query = '''
+        SELECT i.fecha_desde, i.fecha_hasta, l.nombre as local,
+               COALESCE(cat.nombre, '') as categoria,
+               i.total, i.observaciones
+        FROM ingresos i
+        JOIN locales l ON i.local_id = l.id
+        LEFT JOIN categorias cat ON i.categoria_id = cat.id
+        WHERE 1=1
+    '''
+    params = []
+    if mostrar_anulados != '1':
+        query += ' AND i.anulado = 0'
+    if fecha_desde:
+        query += ' AND i.fecha_desde >= ?'; params.append(fecha_desde)
+    if fecha_hasta:
+        query += ' AND i.fecha_hasta <= ?'; params.append(fecha_hasta)
+    if local_id:
+        query += ' AND i.local_id = ?'; params.append(local_id)
+    query += ' ORDER BY i.fecha_desde DESC'
+
+    rows = db.execute(query, params).fetchall()
+    db.close()
+
+    def _fmt(val):
+        if val is None: return ''
+        if hasattr(val, 'strftime'): return val.strftime('%d/%m/%Y')
+        s = str(val)[:10]; p = s.split('-')
+        return f'{p[2]}/{p[1]}/{p[0]}' if len(p) == 3 else s
+
+    out = io.StringIO()
+    w = csv.writer(out, delimiter=';')
+    w.writerow(['Fecha desde', 'Fecha hasta', 'Local', 'Categoría', 'Total', 'Observaciones'])
+    for r in rows:
+        w.writerow([_fmt(r['fecha_desde']), _fmt(r['fecha_hasta']),
+                    r['local'], r['categoria'],
+                    str(r['total']).replace('.', ','),
+                    r['observaciones'] or ''])
+
+    fname = f'ingresos_{fecha_desde or "todo"}_{fecha_hasta or "hoy"}.csv'
+    return Response('﻿' + out.getvalue(), mimetype='text/csv; charset=utf-8',
+                    headers={'Content-Disposition': f'attachment; filename="{fname}"'})
 
 
 @bp.route('/<int:ingreso_id>/anular', methods=['POST'])
 def anular_ingreso(ingreso_id):
     db = get_db()
-
-    db.execute(
-        'UPDATE ingresos SET anulado = 1 WHERE id = ?',
-        (ingreso_id,)
-    )
-
+    db.execute('UPDATE ingresos SET anulado = 1 WHERE id = ?', (ingreso_id,))
     db.commit()
     db.close()
-
     flash('Ingreso anulado correctamente.', 'warning')
     return redirect(url_for('ingresos.list_ingresos'))
 
@@ -392,19 +411,9 @@ def anular_ingreso(ingreso_id):
 @bp.route('/<int:ingreso_id>/eliminar', methods=['POST'])
 def eliminar_ingreso(ingreso_id):
     db = get_db()
-
-    db.execute(
-        'DELETE FROM detalle_ingresos_medios WHERE ingreso_id = ?',
-        (ingreso_id,)
-    )
-
-    db.execute(
-        'DELETE FROM ingresos WHERE id = ?',
-        (ingreso_id,)
-    )
-
+    db.execute('DELETE FROM detalle_ingresos_medios WHERE ingreso_id = ?', (ingreso_id,))
+    db.execute('DELETE FROM ingresos WHERE id = ?', (ingreso_id,))
     db.commit()
     db.close()
-
     flash('Ingreso eliminado definitivamente.', 'danger')
     return redirect(url_for('ingresos.list_ingresos'))

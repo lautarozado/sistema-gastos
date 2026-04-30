@@ -177,8 +177,32 @@ def init_db():
     for stmt in tablas:
         db.execute(stmt)
 
+    # Migraciones idempotentes
+    migraciones = [
+        'ALTER TABLE ingresos ADD COLUMN IF NOT EXISTS categoria_id INTEGER',
+        # Comprobantes en gastos
+        'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS comprobante_path TEXT',
+        # Gastos recurrentes
+        'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS es_recurrente INTEGER DEFAULT 0',
+        'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS frecuencia TEXT',
+        'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS proxima_fecha DATE',
+        # Moneda por transacción (ARS / USD)
+        "ALTER TABLE gastos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
+        "ALTER TABLE ingresos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
+    ]
+    for m in migraciones:
+        db.execute(m)
+
+    # Actualizar nombre del negocio
+    db.execute("UPDATE configuracion SET valor = 'Libreria Centro' WHERE clave = 'nombre_negocio'")
+
+    # Backfill: registros previos sin moneda → ARS
+    db.execute("UPDATE gastos SET moneda = 'ARS' WHERE moneda IS NULL")
+    db.execute("UPDATE ingresos SET moneda = 'ARS' WHERE moneda IS NULL")
+    db.execute("UPDATE gastos SET es_recurrente = 0 WHERE es_recurrente IS NULL")
+
     defaults = [
-        ('nombre_negocio', 'Mi Negocio'),
+        ('nombre_negocio', 'Libreria Centro'),
         ('moneda_simbolo', '$'),
     ]
     for clave, valor in defaults:
@@ -186,6 +210,22 @@ def init_db():
             'INSERT INTO configuracion (clave, valor) VALUES (?, ?) ON CONFLICT (clave) DO NOTHING',
             (clave, valor)
         )
+
+    # Crear categorías iniciales de ingreso solo si no existe ninguna
+    count_ing = db.execute(
+        "SELECT COUNT(*) as c FROM categorias WHERE tipo IN ('ingreso', 'ambos')"
+    ).fetchone()['c']
+    if count_ing == 0:
+        for nombre, color in [
+            ('Ventas mostrador', '#10b981'),
+            ('Ventas online',    '#4361ee'),
+            ('Transferencias',   '#06b6d4'),
+            ('Otros ingresos',   '#64748b'),
+        ]:
+            db.execute(
+                "INSERT INTO categorias (nombre, tipo, color) VALUES (?, 'ingreso', ?)",
+                (nombre, color)
+            )
 
     db.commit()
     db.close()

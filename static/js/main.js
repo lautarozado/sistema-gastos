@@ -187,8 +187,8 @@ function distribuirEnEfectivo() {
 // ── Confirmación de eliminación ───────────────────
 function confirmarEliminar(form, nombre) {
   var msg = nombre
-    ? '¿Eliminar definitivamente "' + nombre + '"? Esta acción no se puede deshacer.'
-    : '¿Eliminar definitivamente? Esta acción no se puede deshacer.';
+    ? '¿Seguro que querés eliminar "' + nombre + '"?\nEsta acción no se puede deshacer.'
+    : '¿Seguro que querés eliminar este registro?\nEsta acción no se puede deshacer.';
   if (confirm(msg)) form.submit();
 }
 function confirmarAnular(form) {

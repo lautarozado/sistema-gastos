@@ -22,7 +22,7 @@
       </div>
 
       <div class="card-body">
-        <form method="post" id="formGasto" novalidate>
+        <form method="post" id="formGasto" novalidate enctype="multipart/form-data">
 
           <div class="row g-3">
             {# Fecha #}
@@ -78,15 +78,23 @@
               <div class="form-text">Se carga automáticamente al elegir la categoría.</div>
             </div>
 
-            {# Monto #}
-            <div class="col-sm-6">
+            {# Monto + Moneda #}
+            <div class="col-sm-4">
               <label class="form-label" for="monto">Monto <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text fw-bold text-danger">{{ moneda }}</span>
                 <input type="text" inputmode="decimal" name="monto" id="monto" class="form-control"
                        placeholder="0,00" autocomplete="off"
-                       value="{{ gasto.monto or '' }}" required>
+                       value="{{ '%.2f'|format(gasto.monto|float) if gasto.monto else '' }}" required>
               </div>
+            </div>
+            <div class="col-sm-2">
+              <label class="form-label" for="moneda_tx">Moneda</label>
+              <select name="moneda" id="moneda_tx" class="form-select">
+                {% for cod, label in monedas %}
+                <option value="{{ cod }}" {{ 'selected' if (gasto.moneda or 'ARS') == cod }}>{{ cod }}</option>
+                {% endfor %}
+              </select>
             </div>
 
             {# Medio de pago #}
@@ -129,6 +137,54 @@
                         placeholder="Notas internas, detalles adicionales..."
                         rows="2">{{ gasto.observaciones or '' }}</textarea>
             </div>
+
+            {# Comprobante #}
+            <div class="col-12">
+              <label class="form-label" for="comprobante">
+                <i class="bi bi-paperclip me-1 text-secondary"></i>Comprobante
+              </label>
+              {% if comprobante_path_actual %}
+              <div class="mb-2">
+                <a href="{{ url_for('gastos.ver_comprobante', filename=comprobante_path_actual) }}"
+                   target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-eye me-1"></i>Ver comprobante actual
+                </a>
+                <span class="text-muted ms-2" style="font-size:.8rem">Subí uno nuevo para reemplazarlo.</span>
+              </div>
+              {% endif %}
+              <input type="file" name="comprobante" id="comprobante" class="form-control"
+                     accept=".jpg,.jpeg,.png,.pdf">
+              <div class="form-text">Formatos: JPG, PNG, PDF.</div>
+            </div>
+
+            {# Recurrente #}
+            <div class="col-12">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="es_recurrente"
+                       id="es_recurrente" value="1"
+                       {{ 'checked' if gasto.es_recurrente == 1 or gasto.es_recurrente == '1' }}
+                       onchange="toggleRecurrente(this.checked)">
+                <label class="form-check-label fw-semibold" for="es_recurrente">
+                  <i class="bi bi-arrow-repeat me-1 text-info"></i>Gasto recurrente
+                </label>
+              </div>
+              <div id="recurrente-fields" class="row g-2"
+                   style="{{ '' if (gasto.es_recurrente == 1 or gasto.es_recurrente == '1') else 'display:none' }}">
+                <div class="col-sm-6">
+                  <label class="form-label" for="frecuencia">Frecuencia</label>
+                  <select name="frecuencia" id="frecuencia" class="form-select">
+                    {% for cod, label in frecuencias %}
+                    <option value="{{ cod }}" {{ 'selected' if gasto.frecuencia == cod }}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label" for="proxima_fecha">Próxima fecha</label>
+                  <input type="date" name="proxima_fecha" id="proxima_fecha" class="form-control"
+                         value="{{ gasto.proxima_fecha|string|truncate(10, True, '') if gasto.proxima_fecha else '' }}">
+                </div>
+              </div>
+            </div>
           </div>
 
           <hr class="my-4">
@@ -167,6 +223,11 @@
 
 {% block scripts %}
 <script>
+function toggleRecurrente(checked) {
+  var fields = document.getElementById('recurrente-fields');
+  fields.style.display = checked ? '' : 'none';
+}
+
 function montoToMachine(valor) {
   if (valor === null || valor === undefined) return '0';
 

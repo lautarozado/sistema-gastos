@@ -36,11 +36,15 @@
         <div class="row g-3">
           <div class="col-6">
             <div class="form-label text-muted mb-0" style="font-size:.75rem">PERÍODO</div>
-            <div class="fw-semibold">{{ ingreso.fecha_desde }} al {{ ingreso.fecha_hasta }}</div>
+            <div class="fw-semibold">{{ ingreso.fecha_desde|fmt_date }} al {{ ingreso.fecha_hasta|fmt_date }}</div>
           </div>
           <div class="col-6">
             <div class="form-label text-muted mb-0" style="font-size:.75rem">LOCAL</div>
             <div class="fw-semibold">{{ ingreso.local_nombre }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label text-muted mb-0" style="font-size:.75rem">CATEGORÍA</div>
+            <div class="fw-semibold">{{ ingreso.categoria_nombre or '—' }}</div>
           </div>
           <div class="col-6">
             <div class="form-label text-muted mb-0" style="font-size:.75rem">TOTAL</div>
@@ -50,7 +54,7 @@
           </div>
           <div class="col-6">
             <div class="form-label text-muted mb-0" style="font-size:.75rem">REGISTRADO</div>
-            <div>{{ ingreso.created_at[:16] if ingreso.created_at else '—' }}</div>
+            <div>{{ ingreso.created_at|fmt_datetime }}</div>
           </div>
           {% if ingreso.observaciones %}
           <div class="col-12">

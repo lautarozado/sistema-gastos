@@ -3,11 +3,15 @@
 {% block page_title %}Todos los Movimientos{% endblock %}
 
 {% block topbar_actions %}
+<a href="{{ url_for('movimientos.exportar_csv') }}?{{ request.query_string.decode() }}"
+   class="btn btn-sm btn-outline-secondary" title="Exportar a CSV">
+  <i class="bi bi-download me-1"></i>CSV
+</a>
 <a href="{{ url_for('ingresos.nuevo_ingreso') }}" class="btn btn-sm btn-success">
-  <i class="bi bi-plus me-1"></i>Ingreso
+  <i class="bi bi-plus-lg me-1"></i>Ingreso
 </a>
 <a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-sm btn-danger">
-  <i class="bi bi-plus me-1"></i>Gasto
+  <i class="bi bi-plus-lg me-1"></i>Gasto
 </a>
 {% endblock %}
 
@@ -88,6 +92,7 @@
         <div class="stat-label">Ingresos</div>
         <div class="stat-value income" style="font-size:1.15rem">
           {{ moneda }} {{ "{:,.2f}".format(total_ingresos).replace(",","X").replace(".",",").replace("X",".") }}
+          {% if total_ingresos_usd > 0 %}<br><small class="text-warning fw-bold" style="font-size:.8rem">USD {{ "{:,.2f}".format(total_ingresos_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
         </div>
       </div>
     </div>
@@ -99,17 +104,19 @@
         <div class="stat-label">Gastos</div>
         <div class="stat-value expense" style="font-size:1.15rem">
           {{ moneda }} {{ "{:,.2f}".format(total_gastos).replace(",","X").replace(".",",").replace("X",".") }}
+          {% if total_gastos_usd > 0 %}<br><small class="text-warning fw-bold" style="font-size:.8rem">USD {{ "{:,.2f}".format(total_gastos_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
         </div>
       </div>
     </div>
   </div>
   <div class="col-4">
     <div class="stat-card py-3">
-      <div class="stat-icon balance" style="width:38px;height:38px;font-size:1rem"><i class="bi bi-wallet2"></i></div>
+      <div class="stat-icon balance" style="width:38px;height:38px;font-size:1rem"><i class="bi bi-cash-stack"></i></div>
       <div class="stat-body">
         <div class="stat-label">Balance</div>
         <div class="stat-value {{ 'bal-pos' if balance >= 0 else 'bal-neg' }}" style="font-size:1.15rem">
           {{ moneda }} {{ "{:,.2f}".format(balance|abs).replace(",","X").replace(".",",").replace("X",".") }}
+          {% if balance_usd != 0 %}<br><small class="{{ 'text-success' if balance_usd >= 0 else 'text-danger' }} fw-bold" style="font-size:.8rem">USD {{ "{:,.2f}".format(balance_usd|abs).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
         </div>
       </div>
     </div>
@@ -130,10 +137,10 @@
         <tr>
           <th>Fecha</th>
           <th>Tipo</th>
-          <th>Local</th>
-          <th>Categoría / Sub.</th>
-          <th>Proveedor</th>
-          <th>Descripción</th>
+          <th class="d-none d-sm-table-cell">Local</th>
+          <th>Categoría</th>
+          <th class="d-none d-sm-table-cell">Proveedor</th>
+          <th class="d-none d-md-table-cell">Descripción</th>
           <th class="text-end">Monto</th>
           <th class="text-center">Acciones</th>
         </tr>
@@ -141,7 +148,7 @@
       <tbody>
         {% for m in movimientos %}
         <tr class="{{ 'row-anulado' if m.anulado }}">
-          <td class="text-nowrap">{{ m.fecha }}</td>
+          <td class="text-nowrap">{{ m.fecha|fmt_date }}</td>
           <td>
             {% if m.tipo == 'ingreso' %}
             <span class="badge-income"><i class="bi bi-arrow-up me-1"></i>Ingreso</span>
@@ -150,17 +157,18 @@
             {% endif %}
             {% if m.anulado %}<span class="badge bg-secondary ms-1" style="font-size:.65rem">ANULADO</span>{% endif %}
           </td>
-          <td>{{ m.local_nombre }}</td>
+          <td class="d-none d-sm-table-cell">{{ m.local_nombre }}</td>
           <td>
             {{ m.categoria_nombre }}
             {% if m.subcategoria_nombre %}<br><small class="text-muted">{{ m.subcategoria_nombre }}</small>{% endif %}
           </td>
-          <td>{{ m.proveedor_nombre or '—' }}</td>
-          <td class="text-truncate" style="max-width:160px" title="{{ m.descripcion or '' }}">
+          <td class="d-none d-sm-table-cell">{{ m.proveedor_nombre or '—' }}</td>
+          <td class="d-none d-md-table-cell text-truncate" style="max-width:160px" title="{{ m.descripcion or '' }}">
             {{ m.descripcion or '—' }}
           </td>
           <td class="text-end text-nowrap {{ 'amount-income' if m.tipo == 'ingreso' else 'amount-expense' }}">
             {{ moneda }} {{ "{:,.2f}".format(m.monto).replace(",","X").replace(".",",").replace("X",".") }}
+            {% if m.moneda == 'USD' %}<br><span class="badge bg-warning text-dark" style="font-size:.65rem">USD</span>{% endif %}
           </td>
           <td class="text-center text-nowrap">
             {% if m.tipo == 'gasto' %}

@@ -29,12 +29,12 @@
             <div class="col-sm-6">
               <label class="form-label" for="fecha_desde">Fecha desde <span class="text-danger">*</span></label>
               <input type="date" name="fecha_desde" id="fecha_desde" class="form-control"
-                     value="{{ ingreso.fecha_desde or '' }}" required>
+                     value="{{ ingreso.fecha_desde|string|truncate(10, True, '') if ingreso.fecha_desde else '' }}" required>
             </div>
             <div class="col-sm-6">
               <label class="form-label" for="fecha_hasta">Fecha hasta <span class="text-danger">*</span></label>
               <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control"
-                     value="{{ ingreso.fecha_hasta or '' }}" required>
+                     value="{{ ingreso.fecha_hasta|string|truncate(10, True, '') if ingreso.fecha_hasta else '' }}" required>
             </div>
 
             {# Local #}
@@ -51,19 +51,40 @@
               </select>
             </div>
 
-            {# Total #}
+            {# Categoría #}
             <div class="col-sm-6">
+              <label class="form-label" for="categoria_id">Categoría <span class="text-danger">*</span></label>
+              <select name="categoria_id" id="categoria_id" class="form-select" required>
+                <option value="">— Seleccionar categoría —</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}"
+                  {{ 'selected' if ingreso.categoria_id|string == c.id|string }}>
+                  {{ c.nombre }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Total + Moneda #}
+            <div class="col-sm-4">
               <label class="form-label" for="total">Total ingresado <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text fw-bold text-success">{{ moneda }}</span>
                 <input type="text" inputmode="decimal" name="total" id="total" class="form-control"
                        placeholder="0,00" autocomplete="off"
-                       value="{{ ingreso.total or '' }}" required>
+                       value="{{ '%.2f'|format(ingreso.total|float) if ingreso.total else '' }}" required>
               </div>
+            </div>
+            <div class="col-sm-2">
+              <label class="form-label" for="moneda_tx">Moneda</label>
+              <select name="moneda" id="moneda_tx" class="form-select">
+                <option value="ARS" {{ 'selected' if (ingreso.moneda or 'ARS') == 'ARS' }}>ARS</option>
+                <option value="USD" {{ 'selected' if ingreso.moneda == 'USD' }}>USD</option>
+              </select>
             </div>
 
             {# Observaciones #}
-            <div class="col-12">
+            <div class="col-sm-6">
               <label class="form-label" for="observaciones">Observaciones</label>
               <input type="text" name="observaciones" id="observaciones" class="form-control"
                      placeholder="Semana alta, feriado, etc..."
@@ -89,6 +110,7 @@
             {% set colors = {'efectivo': '#10b981', 'transferencia': '#4361ee',
                              'tarjeta': '#f59e0b', 'mercado_pago': '#06b6d4', 'otro': '#8b5cf6'} %}
             {% for codigo, label in medios_cobro %}
+            {% set mv = medios_vals.get(codigo, 0) %}
             <div class="payment-row">
               <div class="payment-icon"
                    style="background:{{ colors.get(codigo,'#e2e8f0') }}20;color:{{ colors.get(codigo,'#6c757d') }}">
@@ -102,7 +124,7 @@
                        id="medio_{{ codigo }}"
                        class="form-control medio-monto"
                        placeholder="0,00" autocomplete="off"
-                       value="{{ medios_vals.get(codigo, 0) if medios_vals.get(codigo, 0) else '' }}">
+                       value="{{ '%.2f'|format(mv|float) if mv else '' }}">
               </div>
             </div>
             {% endfor %}
@@ -134,6 +156,12 @@
       No hay locales activos. <a href="{{ url_for('locales.index') }}">Creá uno aquí</a>.
     </div>
     {% endif %}
+    {% if not categorias %}
+    <div class="alert alert-warning mt-3">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      No hay categorías de ingreso activas. <a href="{{ url_for('categorias.index') }}">Creá una aquí</a>.
+    </div>
+    {% endif %}
 
   </div>
 </div>
@@ -143,31 +171,16 @@
 <script>
 function montoToMachine(valor) {
   if (valor === null || valor === undefined) return '0';
-
-  valor = String(valor).trim();
-
-  // Limpieza básica
-  valor = valor.replace(/\$/g, '');
-  valor = valor.replace(/\s/g, '');
-
+  valor = String(valor).trim().replace(/\$/g, '').replace(/\s/g, '');
   if (valor === '') return '0';
-
-  // Caso formato argentino con coma decimal:
-  // 1.000.000,50 -> 1000000.50
   if (valor.includes(',')) {
-    valor = valor.replace(/\./g, '');
-    valor = valor.replace(',', '.');
+    valor = valor.replace(/\./g, '').replace(',', '.');
   } else {
-    // Caso sin coma:
-    // 10.000 -> 10000
-    // 1.000.000 -> 1000000
     const partes = valor.split('.');
-
     if (partes.length > 1 && partes.slice(1).every(p => p.length === 3)) {
       valor = partes.join('');
     }
   }
-
   const numero = parseFloat(valor);
   return isNaN(numero) ? '0' : String(numero);
 }
@@ -178,21 +191,17 @@ function parseMonto(valor) {
 
 function fmtMoney(valor) {
   return '$ ' + Number(valor || 0).toLocaleString('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: 2, maximumFractionDigits: 2
   });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Formateo de todos los inputs de monto
   if (typeof initMontoInput === 'function') {
     initMontoInput('total');
-
     document.querySelectorAll('.medio-monto').forEach(function(inp) {
       initMontoInput(inp);
     });
   }
-
   if (typeof initPaymentValidation === 'function') {
     initPaymentValidation();
   }
@@ -209,10 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var suma = 0;
-
-    document.querySelectorAll('.medio-monto').forEach(function(i) {
-      suma += parseMonto(i.value);
-    });
+    document.querySelectorAll('.medio-monto').forEach(function(i) { suma += parseMonto(i.value); });
 
     if (Math.abs(suma - total) > 0.01) {
       e.preventDefault();
@@ -223,9 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    // Normalizar antes de enviar al backend
     totalEl.value = montoToMachine(totalEl.value);
-
     document.querySelectorAll('.medio-monto').forEach(function(inp) {
       inp.value = montoToMachine(inp.value) || '0';
     });

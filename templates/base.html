@@ -41,8 +41,13 @@
       <i class="bi bi-arrow-up-circle-fill"></i><span>Ingresos</span>
     </a>
     <a href="{{ url_for('gastos.list_gastos') }}"
-       class="nav-link expense-link {% if request.blueprint == 'gastos' %}active{% endif %}">
+       class="nav-link expense-link {% if request.blueprint == 'gastos' and request.endpoint != 'gastos.recurrentes' %}active{% endif %}">
       <i class="bi bi-arrow-down-circle-fill"></i><span>Gastos</span>
+    </a>
+    <a href="{{ url_for('gastos.recurrentes') }}"
+       class="nav-link {% if request.endpoint == 'gastos.recurrentes' %}active{% endif %}"
+       style="padding-left:2.25rem;font-size:.85rem">
+      <i class="bi bi-arrow-repeat"></i><span>Recurrentes</span>
     </a>
 
     <div class="nav-section-label">Administrar</div>

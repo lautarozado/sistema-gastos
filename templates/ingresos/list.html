@@ -3,6 +3,10 @@
 {% block page_title %}Ingresos{% endblock %}
 
 {% block topbar_actions %}
+<a href="{{ url_for('ingresos.exportar_csv') }}?{{ request.query_string.decode() }}"
+   class="btn btn-sm btn-outline-secondary" title="Exportar a CSV">
+  <i class="bi bi-download me-1"></i>CSV
+</a>
 <a href="{{ url_for('ingresos.nuevo_ingreso') }}" class="btn btn-success btn-sm">
   <i class="bi bi-plus-lg me-1"></i>Nuevo Ingreso
 </a>
@@ -45,9 +49,10 @@
              {{ 'checked' if mostrar_anulados == '1' }} onchange="this.form.submit()">
       <label class="form-check-label" for="chkAnul" style="font-size:.82rem">Mostrar anulados</label>
     </div>
-    {% if total_filtrado > 0 %}
+    {% if total_ars > 0 or total_usd > 0 %}
     <span class="ms-auto fw-bold amount-income" style="font-size:.95rem">
-      Total: {{ moneda }} {{ "{:,.2f}".format(total_filtrado).replace(",","X").replace(".",",").replace("X",".") }}
+      {% if total_ars > 0 %}ARS {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}{% endif %}
+      {% if total_usd > 0 %}<span class="ms-2 text-warning">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</span>{% endif %}
     </span>
     {% endif %}
   </div>
@@ -72,9 +77,10 @@
         <tr>
           <th>Período</th>
           <th>Local</th>
-          <th>Observaciones</th>
+          <th class="d-none d-sm-table-cell">Categoría</th>
+          <th class="d-none d-md-table-cell">Observaciones</th>
           <th class="text-end">Total</th>
-          <th class="text-center">Estado</th>
+          <th class="text-center d-none d-sm-table-cell">Estado</th>
           <th class="text-center">Acciones</th>
         </tr>
       </thead>
@@ -82,9 +88,9 @@
         {% for i in ingresos %}
         <tr class="{{ 'row-anulado' if i.anulado }}">
           <td class="text-nowrap">
-            <div class="fw-semibold">{{ i.fecha_desde }}</div>
-            {% if i.fecha_desde != i.fecha_hasta %}
-            <small class="text-muted">al {{ i.fecha_hasta }}</small>
+            <div class="fw-semibold">{{ i.fecha_desde|fmt_date }}</div>
+            {% if i.fecha_desde|string != i.fecha_hasta|string %}
+            <small class="text-muted">al {{ i.fecha_hasta|fmt_date }}</small>
             {% endif %}
           </td>
           <td>
@@ -92,13 +98,19 @@
               {{ i.local_nombre }}
             </span>
           </td>
-          <td class="text-truncate" style="max-width:200px" title="{{ i.observaciones or '' }}">
+          <td class="d-none d-sm-table-cell">
+            {% if i.categoria_nombre %}
+            <span class="badge-income">{{ i.categoria_nombre }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="d-none d-md-table-cell text-truncate" style="max-width:160px" title="{{ i.observaciones or '' }}">
             {{ i.observaciones or '—' }}
           </td>
           <td class="text-end fw-bold amount-income text-nowrap" style="font-size:1rem">
             {{ moneda }} {{ "{:,.2f}".format(i.total).replace(",","X").replace(".",",").replace("X",".") }}
+            {% if i.moneda == 'USD' %}<br><span class="badge bg-warning text-dark" style="font-size:.65rem">USD</span>{% endif %}
           </td>
-          <td class="text-center">
+          <td class="text-center d-none d-sm-table-cell">
             {% if i.anulado %}
             <span class="badge bg-secondary-subtle text-secondary border" style="font-size:.72rem">Anulado</span>
             {% else %}
@@ -134,12 +146,32 @@
         {% endfor %}
       </tbody>
       <tfoot>
-        <tr class="table-light fw-bold">
-          <td colspan="3" class="text-end">Total visible:</td>
+        {# Desktop (≥md): Período, Local, Categoría, Observaciones, Total, Estado, Acciones = 7 cols #}
+        <tr class="table-light fw-bold d-none d-md-table-row">
+          <td colspan="4" class="text-end">Total ARS:</td>
           <td class="text-end text-nowrap amount-income">
-            {{ moneda }} {{ "{:,.2f}".format(total_filtrado).replace(",","X").replace(".",",").replace("X",".") }}
+            {{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}
+            {% if total_usd > 0 %}<br><small class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
           </td>
           <td colspan="2"></td>
+        </tr>
+        {# Tablet (sm–md): Período, Local, Categoría, Total, Estado, Acciones = 6 cols #}
+        <tr class="table-light fw-bold d-none d-sm-table-row d-md-none">
+          <td colspan="3" class="text-end">Total ARS:</td>
+          <td class="text-end text-nowrap amount-income">
+            {{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}
+            {% if total_usd > 0 %}<br><small class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
+          </td>
+          <td colspan="2"></td>
+        </tr>
+        {# Mobile (<sm): Período, Local, Total, Acciones = 4 cols #}
+        <tr class="table-light fw-bold d-table-row d-sm-none">
+          <td colspan="2" class="text-end">Total ARS:</td>
+          <td class="text-end text-nowrap amount-income">
+            {{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}
+            {% if total_usd > 0 %}<br><small class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
+          </td>
+          <td></td>
         </tr>
       </tfoot>
     </table>
@@ -162,7 +194,7 @@
 <script>
 function confirmarEliminar(e, form, nombre) {
   e.preventDefault();
-  if (confirm('¿Eliminar definitivamente el ' + nombre + '?\nEsta acción no se puede deshacer.')) {
+  if (confirm('¿Seguro que querés eliminar el ' + nombre + '?\nEsta acción no se puede deshacer.')) {
     form.submit();
   }
 }

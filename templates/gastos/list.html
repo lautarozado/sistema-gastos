@@ -115,6 +115,7 @@
           <th class="d-none d-md-table-cell">Proveedor</th>
           <th class="d-none d-md-table-cell">Descripción</th>
           <th class="d-none d-md-table-cell">Medio de pago</th>
+          <th class="d-none d-md-table-cell">Cheque</th>
           <th class="text-end">Monto</th>
           <th class="text-center">Acciones</th>
         </tr>
@@ -138,6 +139,22 @@
               {{ g.medio_pago }}
             </span>
             {% else %}—{% endif %}
+          </td>
+          <td class="d-none d-md-table-cell">
+            {% if g.cheques_count and g.cheques_count > 0 %}
+            <a href="{{ url_for('cheques.list_cheques') }}" class="text-decoration-none"
+               title="{{ g.cheques_count }} cheque(s) vinculado(s)">
+              <span class="badge {{ 'bg-warning text-dark' if g.cheques_pendientes else 'bg-success' }}" style="font-size:.7rem">
+                <i class="bi bi-bank me-1"></i>
+                {% if g.cheques_pendientes %}Débito {{ g.cheque_proxima_fecha|fmt_date }}{% else %}Pagado{% endif %}
+              </span>
+            </a>
+            {% else %}
+            <a href="{{ url_for('cheques.nuevo_cheque') }}?gasto_id={{ g.id }}"
+               class="text-muted small text-decoration-none" title="Asociar cheque">
+              <i class="bi bi-plus-circle"></i>
+            </a>
+            {% endif %}
           </td>
           <td class="text-end text-nowrap amount-expense fw-bold">
             {{ moneda }} {{ "{:,.2f}".format(g.monto).replace(",","X").replace(".",",").replace("X",".") }}
@@ -176,7 +193,7 @@
       </tbody>
       <tfoot>
         <tr class="table-light fw-bold d-none d-md-table-row">
-          <td colspan="7" class="text-end">Total ARS:</td>
+          <td colspan="8" class="text-end">Total ARS:</td>
           <td class="text-end text-nowrap amount-expense">
             {{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}
             {% if total_usd > 0 %}<br><small class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}

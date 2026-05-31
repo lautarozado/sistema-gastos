@@ -50,6 +50,7 @@ def create_app():
     from blueprints.locales import bp as locales_bp
     from blueprints.reportes import bp as reportes_bp
     from blueprints.configuracion import bp as configuracion_bp
+    from blueprints.cheques import bp as cheques_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(gastos_bp)
@@ -60,6 +61,7 @@ def create_app():
     app.register_blueprint(locales_bp)
     app.register_blueprint(reportes_bp)
     app.register_blueprint(configuracion_bp)
+    app.register_blueprint(cheques_bp)
 
     return app
 

@@ -49,6 +49,10 @@
        style="padding-left:2.25rem;font-size:.85rem">
       <i class="bi bi-arrow-repeat"></i><span>Recurrentes</span>
     </a>
+    <a href="{{ url_for('cheques.list_cheques') }}"
+       class="nav-link {% if request.blueprint == 'cheques' %}active{% endif %}">
+      <i class="bi bi-bank"></i><span>Cheques</span>
+    </a>
 
     <div class="nav-section-label">Administrar</div>
     <a href="{{ url_for('categorias.index') }}"

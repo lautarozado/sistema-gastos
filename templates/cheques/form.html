@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar Cheque' if modo == 'editar' else 'Nuevo Cheque' }}{% endblock %}
+{% block page_title %}{{ 'Editar Cheque' if modo == 'editar' else 'Registrar Cheque' }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('cheques.list_cheques') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Volver
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8 col-xl-7">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <div style="width:32px;height:32px;background:#eef2ff;border-radius:8px;
+                    display:flex;align-items:center;justify-content:center;color:#4361ee">
+          <i class="bi bi-bank"></i>
+        </div>
+        <span class="fw-bold">{{ 'Editar cheque' if modo == 'editar' else 'Nuevo cheque' }}</span>
+      </div>
+
+      <div class="card-body">
+        <form method="post" id="formCheque" novalidate>
+          <div class="row g-3">
+
+            {# Número + Banco #}
+            <div class="col-sm-4">
+              <label class="form-label" for="numero">N° de cheque</label>
+              <input type="text" name="numero" id="numero" class="form-control"
+                     value="{{ cheque.numero or '' }}" maxlength="40" autocomplete="off">
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label" for="banco">Banco</label>
+              <select name="banco" id="banco" class="form-select">
+                {% for b in bancos %}
+                <option value="{{ b }}" {{ 'selected' if (cheque.banco or 'Banco Nación') == b }}>{{ b }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="tipo">Tipo</label>
+              <select name="tipo" id="tipo" class="form-select">
+                <option value="emitido" {{ 'selected' if (cheque.tipo or 'emitido') == 'emitido' }}>Emitido</option>
+                <option value="recibido" {{ 'selected' if cheque.tipo == 'recibido' }}>Recibido</option>
+              </select>
+            </div>
+
+            {# Beneficiario / Proveedor #}
+            <div class="col-sm-6">
+              <label class="form-label" for="proveedor_id">Proveedor (beneficiario)</label>
+              <select name="proveedor_id" id="proveedor_id" class="form-select">
+                <option value="">— Sin proveedor —</option>
+                {% for p in proveedores %}
+                <option value="{{ p.id }}" {{ 'selected' if cheque.proveedor_id|string == p.id|string }}>{{ p.nombre }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Si el beneficiario no es un proveedor cargado, usá el campo de al lado.</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="beneficiario">Beneficiario (texto libre)</label>
+              <input type="text" name="beneficiario" id="beneficiario" class="form-control"
+                     value="{{ cheque.beneficiario or '' }}" maxlength="120" placeholder="Ej: Juan Pérez">
+            </div>
+
+            {# Monto + Moneda #}
+            <div class="col-sm-4">
+              <label class="form-label" for="monto">Monto <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text fw-bold">$</span>
+                <input type="text" inputmode="decimal" name="monto" id="monto" class="form-control"
+                       placeholder="0,00" autocomplete="off"
+                       value="{{ '%.2f'|format(cheque.monto|float) if cheque.monto else '' }}" required>
+              </div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="moneda">Moneda</label>
+              <select name="moneda" id="moneda" class="form-select">
+                <option value="ARS" {{ 'selected' if (cheque.moneda or 'ARS') == 'ARS' }}>ARS</option>
+                <option value="USD" {{ 'selected' if cheque.moneda == 'USD' }}>USD</option>
+              </select>
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label" for="estado">Estado</label>
+              <select name="estado" id="estado" class="form-select">
+                {% for cod, label in estados %}
+                <option value="{{ cod }}" {{ 'selected' if (cheque.estado or 'pendiente') == cod }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Fechas + plazo #}
+            <div class="col-sm-4">
+              <label class="form-label" for="fecha_emision">Fecha de emisión <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_emision" id="fecha_emision" class="form-control"
+                     value="{{ cheque.fecha_emision|string|truncate(10, True, '') if cheque.fecha_emision else '' }}" required>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="fecha_pago">Fecha de pago / débito <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_pago" id="fecha_pago" class="form-control"
+                     value="{{ cheque.fecha_pago|string|truncate(10, True, '') if cheque.fecha_pago else '' }}" required>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Plazo rápido</label>
+              <div class="btn-group w-100" role="group">
+                {% for p in plazos %}
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setPlazo({{ p }})">{{ p }}d</button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="plazo_dias" id="plazo_dias" value="{{ cheque.plazo_dias or '' }}">
+              <div class="form-text">Calcula la fecha de pago desde la emisión.</div>
+            </div>
+
+            {# Gasto vinculado #}
+            <div class="col-12">
+              <label class="form-label" for="gasto_id">Gasto vinculado (opcional)</label>
+              <select name="gasto_id" id="gasto_id" class="form-select">
+                <option value="">— Sin vincular —</option>
+                {% for g in gastos %}
+                <option value="{{ g.id }}" {{ 'selected' if cheque.gasto_id|string == g.id|string }}>
+                  {{ g.fecha|fmt_date }} · {{ g.categoria_nombre }}{% if g.proveedor_nombre %} · {{ g.proveedor_nombre }}{% endif %}
+                  {% if g.descripcion %} · {{ g.descripcion }}{% endif %} · ${{ "%.2f"|format(g.monto) }}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">El cheque queda reflejado en ese gasto.</div>
+            </div>
+
+            {# Local #}
+            <div class="col-sm-6">
+              <label class="form-label" for="local_id">Local</label>
+              <select name="local_id" id="local_id" class="form-select">
+                <option value="">— Sin especificar —</option>
+                {% for l in locales %}
+                <option value="{{ l.id }}" {{ 'selected' if cheque.local_id|string == l.id|string }}>{{ l.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Observaciones #}
+            <div class="col-12">
+              <label class="form-label" for="observaciones">Observaciones</label>
+              <textarea name="observaciones" id="observaciones" class="form-control" rows="2">{{ cheque.observaciones or '' }}</textarea>
+            </div>
+          </div>
+
+          <hr class="my-4">
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('cheques.list_cheques') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i>
+              {{ 'Guardar cambios' if modo == 'editar' else 'Registrar cheque' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setPlazo(dias) {
+  var emi = document.getElementById('fecha_emision').value;
+  if (!emi) { alert('Cargá primero la fecha de emisión.'); return; }
+  var d = new Date(emi + 'T00:00:00');
+  d.setDate(d.getDate() + dias);
+  var iso = d.toISOString().slice(0, 10);
+  document.getElementById('fecha_pago').value = iso;
+  document.getElementById('plazo_dias').value = dias;
+}
+
+function montoToMachine(valor) {
+  if (valor === null || valor === undefined) return '0';
+  valor = String(valor).trim().replace(/\$/g, '').replace(/\s/g, '');
+  if (valor === '') return '0';
+  if (valor.includes(',')) {
+    valor = valor.replace(/\./g, '').replace(',', '.');
+  } else {
+    const partes = valor.split('.');
+    if (partes.length > 1 && partes.slice(1).every(p => p.length === 3)) {
+      valor = partes.join('');
+    }
+  }
+  const numero = parseFloat(valor);
+  return isNaN(numero) ? '0' : String(numero);
+}
+
+document.getElementById('formCheque').addEventListener('submit', function(e) {
+  var montoEl = document.getElementById('monto');
+  var monto = parseFloat(montoToMachine(montoEl.value)) || 0;
+  if (!monto || monto <= 0) {
+    e.preventDefault();
+    alert('El monto debe ser mayor a cero.');
+    montoEl.focus();
+    return;
+  }
+  var emi = document.getElementById('fecha_emision').value;
+  var pago = document.getElementById('fecha_pago').value;
+  if (emi && pago && pago < emi) {
+    e.preventDefault();
+    alert('La fecha de pago no puede ser anterior a la de emisión.');
+    return;
+  }
+  montoEl.value = montoToMachine(montoEl.value);
+});
+</script>
+{% endblock %}

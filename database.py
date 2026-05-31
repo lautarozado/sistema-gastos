@@ -32,6 +32,19 @@ MEDIOS_COBRO = [
     ('otro', 'Otro'),
 ]
 
+# Cheques
+BANCOS = ['Banco Nación', 'Banco Provincia', 'Banco Galicia', 'Santander',
+          'BBVA', 'Macro', 'Credicoop', 'Otro']
+
+ESTADOS_CHEQUE = [
+    ('pendiente', 'Pendiente'),
+    ('debitado',  'Debitado'),
+    ('rechazado', 'Rechazado'),
+    ('anulado',   'Anulado'),
+]
+
+PLAZOS_CHEQUE = [30, 60, 90]
+
 
 class PGCursor:
     """Envuelve el cursor de psycopg2 para imitar la interfaz de sqlite3."""
@@ -172,6 +185,28 @@ def init_db():
             monto REAL NOT NULL DEFAULT 0,
             FOREIGN KEY (ingreso_id) REFERENCES ingresos(id) ON DELETE CASCADE
         )''',
+        '''CREATE TABLE IF NOT EXISTS cheques (
+            id SERIAL PRIMARY KEY,
+            numero TEXT,
+            banco TEXT DEFAULT 'Banco Nación',
+            tipo TEXT DEFAULT 'emitido',
+            beneficiario TEXT,
+            proveedor_id INTEGER,
+            local_id INTEGER,
+            gasto_id INTEGER,
+            monto REAL NOT NULL,
+            fecha_emision DATE NOT NULL,
+            fecha_pago DATE NOT NULL,
+            plazo_dias INTEGER,
+            estado TEXT DEFAULT 'pendiente',
+            moneda TEXT DEFAULT 'ARS',
+            observaciones TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
+            FOREIGN KEY (local_id) REFERENCES locales(id),
+            FOREIGN KEY (gasto_id) REFERENCES gastos(id)
+        )''',
     ]
 
     for stmt in tablas:
@@ -238,7 +273,7 @@ def get_config():
     return {row['clave']: row['valor'] for row in rows}
 
 
-def format_currency(amount, symbol='$'):
+def format_currency(amount, symbol='$'):  # noqa: E305
     if amount is None:
         return f'{symbol} 0,00'
     return f'{symbol} {amount:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')

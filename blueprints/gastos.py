@@ -42,6 +42,16 @@ def get_form_data():
     return locales, categorias, proveedores
 
 
+def _categoria_requiere_proveedor(db, categoria_id):
+    """True si la categoría seleccionada es de proveedor (por nombre)."""
+    if not categoria_id:
+        return False
+    row = db.execute('SELECT nombre FROM categorias WHERE id = ?', (categoria_id,)).fetchone()
+    if not row:
+        return False
+    return 'proveedor' in (row['nombre'] or '').lower()
+
+
 def _parse_monto(val):
     val = str(val).strip().replace('$', '').replace(' ', '')
     if not val:
@@ -74,7 +84,12 @@ def list_gastos():
                l.nombre as local_nombre,
                c.nombre as categoria_nombre,
                sc.nombre as subcategoria_nombre,
-               p.nombre as proveedor_nombre
+               p.nombre as proveedor_nombre,
+               (SELECT COUNT(*) FROM cheques ch WHERE ch.gasto_id = g.id) as cheques_count,
+               (SELECT COUNT(*) FROM cheques ch WHERE ch.gasto_id = g.id
+                  AND ch.estado = 'pendiente') as cheques_pendientes,
+               (SELECT MIN(ch.fecha_pago) FROM cheques ch WHERE ch.gasto_id = g.id
+                  AND ch.estado = 'pendiente') as cheque_proxima_fecha
         FROM gastos g
         JOIN locales l ON g.local_id = l.id
         JOIN categorias c ON g.categoria_id = c.id
@@ -168,6 +183,11 @@ def nuevo_gasto():
             errors.append('El local es obligatorio.')
         if not categoria_id:
             errors.append('La categoría es obligatoria.')
+        if categoria_id and not proveedor_id:
+            _db_chk = get_db()
+            if _categoria_requiere_proveedor(_db_chk, categoria_id):
+                errors.append('Esta categoría requiere que selecciones un proveedor.')
+            _db_chk.close()
         if moneda not in ('ARS', 'USD'):
             moneda = 'ARS'
         try:
@@ -252,6 +272,8 @@ def editar_gasto(gasto_id):
             errors.append('El local es obligatorio.')
         if not categoria_id:
             errors.append('La categoría es obligatoria.')
+        if categoria_id and not proveedor_id and _categoria_requiere_proveedor(db, categoria_id):
+            errors.append('Esta categoría requiere que selecciones un proveedor.')
         if moneda not in ('ARS', 'USD'):
             moneda = 'ARS'
         try:

@@ -54,6 +54,7 @@
                 <option value="">— Seleccionar categoría —</option>
                 {% for c in categorias %}
                 <option value="{{ c.id }}"
+                  data-requiere-prov="{{ '1' if 'proveedor' in c.nombre|lower else '0' }}"
                   {{ 'selected' if gasto.categoria_id|string == c.id|string }}>
                   {{ c.nombre }}
                 </option>
@@ -278,6 +279,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Proveedor obligatorio según categoría
+  var provSel = document.getElementById('proveedor_id');
+  var provLabel = document.querySelector('label[for="proveedor_id"]');
+  function categoriaRequiereProveedor() {
+    if (!catSel) return false;
+    var opt = catSel.options[catSel.selectedIndex];
+    return opt && opt.getAttribute('data-requiere-prov') === '1';
+  }
+  function actualizarProveedorObligatorio() {
+    var req = categoriaRequiereProveedor();
+    if (provLabel) {
+      provLabel.innerHTML = req
+        ? 'Proveedor <span class="text-danger">*</span>'
+        : 'Proveedor';
+    }
+    if (provSel) {
+      if (req) { provSel.setAttribute('required', 'required'); }
+      else { provSel.removeAttribute('required'); }
+      var primera = provSel.querySelector('option[value=""]');
+      if (primera) primera.textContent = req ? '— Seleccionar proveedor —' : '— Sin proveedor —';
+    }
+  }
+  if (catSel) {
+    catSel.addEventListener('change', actualizarProveedorObligatorio);
+    actualizarProveedorObligatorio();
+  }
+
   // Formateo del input de monto
   if (typeof initMontoInput === 'function') {
     initMontoInput('monto');
@@ -291,6 +319,13 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       alert('El monto debe ser mayor a cero.');
       montoEl.focus();
+      return;
+    }
+
+    if (categoriaRequiereProveedor() && provSel && !provSel.value) {
+      e.preventDefault();
+      alert('Esta categoría requiere que selecciones un proveedor.');
+      provSel.focus();
       return;
     }
 

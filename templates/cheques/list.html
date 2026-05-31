@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Cheques{% endblock %}
+{% block page_title %}Cheques{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('cheques.nuevo_cheque') }}" class="btn btn-primary btn-sm">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo Cheque
+</a>
+{% endblock %}
+
+{% set _money = '{:,.2f}' %}
+{% macro money(v) -%}
+{{ "{:,.2f}".format(v or 0).replace(",","X").replace(".",",").replace("X",".") }}
+{%- endmacro %}
+
+{% block content %}
+
+{# ── Resumen de flujo de caja por cheques ── #}
+<div class="row g-2 mb-3">
+  <div class="col-12 col-md-4">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.8rem">Pendiente total</div>
+      <div class="fw-bold" style="font-size:1.2rem">$ {{ money(total_pendiente) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.8rem">A debitar (7 días)</div>
+      <div class="fw-bold text-warning" style="font-size:1.2rem">$ {{ money(proximos_7d) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.8rem">Vencidos sin debitar</div>
+      <div class="fw-bold text-danger" style="font-size:1.2rem">$ {{ money(vencidos) }}</div>
+    </div></div>
+  </div>
+</div>
+
+{# ── Filtros ── #}
+<form method="get" class="filter-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-3">
+      <label class="form-label">Estado</label>
+      <select name="estado" class="form-select">
+        <option value="">Todos</option>
+        {% for cod, label in estados %}
+        <option value="{{ cod }}" {{ 'selected' if estado == cod }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">Beneficiario</label>
+      <select name="proveedor_id" class="form-select">
+        <option value="">Todos</option>
+        {% for p in proveedores %}
+        <option value="{{ p.id }}" {{ 'selected' if proveedor_id == p.id|string }}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Pago desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Pago hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-12 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+      <a href="{{ url_for('cheques.list_cheques') }}" class="btn btn-outline-secondary btn-icon">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+</form>
+
+{# ── Tabla ── #}
+<div class="card">
+  <div class="card-header">
+    <i class="bi bi-bank me-2"></i>{{ cheques|length }} cheque{{ 's' if cheques|length != 1 }}
+  </div>
+
+  {% if cheques %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Banco</th>
+          <th>Beneficiario</th>
+          <th class="d-none d-md-table-cell">Emisión</th>
+          <th>Pago / Débito</th>
+          <th class="text-end">Monto</th>
+          <th>Estado</th>
+          <th class="d-none d-lg-table-cell">Gasto</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cheques %}
+        {% set vencido = c.estado == 'pendiente' and c.fecha_pago and (c.fecha_pago|string)[:10] < (hoy|string) %}
+        <tr>
+          <td class="text-nowrap">{{ c.numero or '—' }}</td>
+          <td class="text-nowrap">{{ c.banco or '—' }}</td>
+          <td>{{ c.proveedor_nombre or c.beneficiario or '—' }}</td>
+          <td class="d-none d-md-table-cell text-nowrap">{{ c.fecha_emision|fmt_date }}</td>
+          <td class="text-nowrap {{ 'text-danger fw-semibold' if vencido }}">
+            {{ c.fecha_pago|fmt_date }}
+            {% if c.plazo_dias %}<span class="badge bg-light text-secondary border ms-1" style="font-size:.65rem">{{ c.plazo_dias }}d</span>{% endif %}
+            {% if vencido %}<i class="bi bi-exclamation-triangle-fill ms-1" title="Vencido"></i>{% endif %}
+          </td>
+          <td class="text-end text-nowrap fw-bold">
+            $ {{ money(c.monto) }}
+            {% if c.moneda == 'USD' %}<span class="badge bg-warning text-dark" style="font-size:.6rem">USD</span>{% endif %}
+          </td>
+          <td>
+            {% set badge = {'pendiente':'bg-warning text-dark','debitado':'bg-success','rechazado':'bg-danger','anulado':'bg-secondary'} %}
+            <span class="badge {{ badge.get(c.estado, 'bg-secondary') }}" style="font-size:.7rem">
+              {{ c.estado|capitalize }}
+            </span>
+          </td>
+          <td class="d-none d-lg-table-cell text-truncate" style="max-width:160px"
+              title="{{ c.gasto_descripcion or '' }}">
+            {{ c.gasto_descripcion or '—' }}
+          </td>
+          <td class="text-center text-nowrap">
+            {% if c.estado == 'pendiente' %}
+            <form method="post" action="{{ url_for('cheques.cambiar_estado', cheque_id=c.id) }}" class="d-inline">
+              <input type="hidden" name="estado" value="debitado">
+              <button type="submit" class="btn btn-xs btn-outline-success btn-icon" title="Marcar debitado">
+                <i class="bi bi-check2-circle"></i>
+              </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('cheques.editar_cheque', cheque_id=c.id) }}"
+               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{{ url_for('cheques.eliminar_cheque', cheque_id=c.id) }}"
+                  class="d-inline" onsubmit="return confirm('¿Eliminar este cheque definitivamente?')">
+              <button type="submit" class="btn btn-xs btn-outline-danger btn-icon" title="Eliminar">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-bank"></i>
+    <h5>Sin cheques registrados</h5>
+    <p>Registrá los cheques emitidos para controlar cuándo se debitan.</p>
+    <a href="{{ url_for('cheques.nuevo_cheque') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus me-1"></i>Registrar primer cheque
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

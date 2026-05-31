@@ -86,6 +86,29 @@ CREATE TABLE IF NOT EXISTS detalle_ingresos_medios (
     FOREIGN KEY (ingreso_id) REFERENCES ingresos(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS cheques (
+    id SERIAL PRIMARY KEY,
+    numero TEXT,
+    banco TEXT DEFAULT 'Banco Nación',
+    tipo TEXT DEFAULT 'emitido',
+    beneficiario TEXT,
+    proveedor_id INTEGER,
+    local_id INTEGER,
+    gasto_id INTEGER,
+    monto REAL NOT NULL,
+    fecha_emision DATE NOT NULL,
+    fecha_pago DATE NOT NULL,
+    plazo_dias INTEGER,
+    estado TEXT DEFAULT 'pendiente',
+    moneda TEXT DEFAULT 'ARS',
+    observaciones TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
+    FOREIGN KEY (local_id) REFERENCES locales(id),
+    FOREIGN KEY (gasto_id) REFERENCES gastos(id)
+);
+
 -- Datos iniciales de configuración
 INSERT INTO configuracion (clave, valor) VALUES
     ('nombre_negocio', 'Mi Negocio'),

@@ -3,6 +3,13 @@
 {% block page_title %}Cheques{% endblock %}
 
 {% block topbar_actions %}
+<a href="{{ url_for('cheques.agenda') }}" class="btn btn-sm btn-outline-secondary" title="Calendario de débitos">
+  <i class="bi bi-calendar3 me-1"></i>Agenda
+</a>
+<a href="{{ url_for('cheques.exportar_csv') }}?{{ request.query_string.decode() }}"
+   class="btn btn-sm btn-outline-secondary" title="Exportar a CSV">
+  <i class="bi bi-download me-1"></i>CSV
+</a>
 <a href="{{ url_for('cheques.nuevo_cheque') }}" class="btn btn-primary btn-sm">
   <i class="bi bi-plus-lg me-1"></i>Nuevo Cheque
 </a>
@@ -15,37 +22,88 @@
 
 {% block content %}
 
-{# ── Resumen de flujo de caja por cheques ── #}
+{# ── Alerta de vencidos ── #}
+{% if cant_vencidos > 0 %}
+<div class="alert alert-danger alert-dismissible fade show py-2 mb-3" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  Tenés <strong>{{ cant_vencidos }}</strong> cheque{{ 's' if cant_vencidos != 1 }}
+  pendiente{{ 's' if cant_vencidos != 1 }} con fecha de débito vencida
+  (total <strong>$ {{ money(vencidos) }}</strong>).
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{# ── Total a debitar por horizonte (solo pendientes) ── #}
 <div class="row g-2 mb-3">
+  <div class="col-6 col-md-2">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">A debitar · 7 días</div>
+      <div class="fw-bold text-warning" style="font-size:1.05rem">$ {{ money(horizontes[7]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">A debitar · 30 días</div>
+      <div class="fw-bold" style="font-size:1.05rem">$ {{ money(horizontes[30]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">A debitar · 60 días</div>
+      <div class="fw-bold" style="font-size:1.05rem">$ {{ money(horizontes[60]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">A debitar · 90 días</div>
+      <div class="fw-bold" style="font-size:1.05rem">$ {{ money(horizontes[90]) }}</div>
+    </div></div>
+  </div>
   <div class="col-12 col-md-4">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.8rem">Pendiente total</div>
-      <div class="fw-bold" style="font-size:1.2rem">$ {{ money(total_pendiente) }}</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.8rem">A debitar (7 días)</div>
-      <div class="fw-bold text-warning" style="font-size:1.2rem">$ {{ money(proximos_7d) }}</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.8rem">Vencidos sin debitar</div>
-      <div class="fw-bold text-danger" style="font-size:1.2rem">$ {{ money(vencidos) }}</div>
+    <div class="card h-100 border-primary"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">Total pendiente (todos)</div>
+      <div class="fw-bold text-primary" style="font-size:1.2rem">$ {{ money(total_pendiente) }}</div>
     </div></div>
   </div>
 </div>
 
+{# ── Pendiente por beneficiario ── #}
+{% if por_proveedor %}
+<div class="card mb-3">
+  <div class="card-header py-2 d-flex align-items-center" role="button"
+       data-bs-toggle="collapse" data-bs-target="#porProveedor" style="cursor:pointer">
+    <i class="bi bi-people me-2"></i>
+    <span class="fw-semibold">Pendiente por beneficiario</span>
+    <span class="badge bg-secondary ms-2">{{ por_proveedor|length }}</span>
+    <i class="bi bi-chevron-down ms-auto"></i>
+  </div>
+  <div class="collapse" id="porProveedor">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 align-middle">
+        <tbody>
+          {% for r in por_proveedor %}
+          <tr>
+            <td>{{ r.nombre }}</td>
+            <td class="text-muted text-nowrap" style="font-size:.8rem">{{ r.cant }} cheque{{ 's' if r.cant != 1 }}</td>
+            <td class="text-end fw-bold text-nowrap">$ {{ money(r.monto) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {# ── Filtros ── #}
 <form method="get" class="filter-card">
   <div class="row g-2 align-items-end">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
       <label class="form-label">Estado</label>
       <select name="estado" class="form-select">
         <option value="">Todos</option>
         {% for cod, label in estados %}
-        <option value="{{ cod }}" {{ 'selected' if estado == cod }}>{{ label }}</option>
+        <option value="{{ cod }}" {{ 'selected' if filtros.estado == cod }}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
@@ -54,20 +112,29 @@
       <select name="proveedor_id" class="form-select">
         <option value="">Todos</option>
         {% for p in proveedores %}
-        <option value="{{ p.id }}" {{ 'selected' if proveedor_id == p.id|string }}>{{ p.nombre }}</option>
+        <option value="{{ p.id }}" {{ 'selected' if filtros.proveedor_id == p.id|string }}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Banco</label>
+      <select name="banco" class="form-select">
+        <option value="">Todos</option>
+        {% for b in bancos %}
+        <option value="{{ b }}" {{ 'selected' if filtros.banco == b }}>{{ b }}</option>
         {% endfor %}
       </select>
     </div>
     <div class="col-6 col-md-2">
       <label class="form-label">Pago desde</label>
-      <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+      <input type="date" name="fecha_desde" class="form-control" value="{{ filtros.fecha_desde }}">
     </div>
     <div class="col-6 col-md-2">
       <label class="form-label">Pago hasta</label>
-      <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ filtros.fecha_hasta }}">
     </div>
-    <div class="col-12 col-md-2 d-flex gap-2">
-      <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+    <div class="col-12 col-md-1 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i></button>
       <a href="{{ url_for('cheques.list_cheques') }}" class="btn btn-outline-secondary btn-icon">
         <i class="bi bi-x-lg"></i>
       </a>

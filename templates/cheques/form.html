@@ -89,27 +89,74 @@
               </select>
             </div>
 
-            {# Fechas + plazo #}
+            {# Fecha de emisión (común a ambos modos) #}
             <div class="col-sm-4">
               <label class="form-label" for="fecha_emision">Fecha de emisión <span class="text-danger">*</span></label>
               <input type="date" name="fecha_emision" id="fecha_emision" class="form-control"
                      value="{{ cheque.fecha_emision|string|truncate(10, True, '') if cheque.fecha_emision else '' }}" required>
             </div>
-            <div class="col-sm-4">
-              <label class="form-label" for="fecha_pago">Fecha de pago / débito <span class="text-danger">*</span></label>
-              <input type="date" name="fecha_pago" id="fecha_pago" class="form-control"
-                     value="{{ cheque.fecha_pago|string|truncate(10, True, '') if cheque.fecha_pago else '' }}" required>
-            </div>
-            <div class="col-sm-4">
-              <label class="form-label">Plazo rápido</label>
-              <div class="btn-group w-100" role="group">
-                {% for p in plazos %}
-                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setPlazo({{ p }})">{{ p }}d</button>
-                {% endfor %}
+
+            {# Toggle emisión múltiple (solo al crear) #}
+            {% if modo != 'editar' %}
+            <div class="col-sm-8 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="emision_multiple"
+                       id="emision_multiple" value="1"
+                       {{ 'checked' if cheque.emision_multiple == '1' }}
+                       onchange="toggleMultiple(this.checked)">
+                <label class="form-check-label fw-semibold" for="emision_multiple">
+                  <i class="bi bi-collection me-1 text-primary"></i>Emitir varios cheques diferidos
+                </label>
+                <div class="form-text">Genera un cheque por cada plazo, con el mismo monto y proveedor.</div>
               </div>
-              <input type="hidden" name="plazo_dias" id="plazo_dias" value="{{ cheque.plazo_dias or '' }}">
-              <div class="form-text">Calcula la fecha de pago desde la emisión.</div>
             </div>
+            {% endif %}
+
+            {# Modo individual: fecha de pago + plazo rápido #}
+            <div class="col-12" id="bloque-individual">
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label class="form-label" for="fecha_pago">Fecha de pago / débito <span class="text-danger">*</span></label>
+                  <input type="date" name="fecha_pago" id="fecha_pago" class="form-control"
+                         value="{{ cheque.fecha_pago|string|truncate(10, True, '') if cheque.fecha_pago else '' }}">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label">Plazo rápido</label>
+                  <div class="btn-group w-100" role="group">
+                    {% for p in plazos %}
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setPlazo({{ p }})">{{ p }}d</button>
+                    {% endfor %}
+                  </div>
+                  <input type="hidden" name="plazo_dias" id="plazo_dias" value="{{ cheque.plazo_dias or '' }}">
+                  <div class="form-text">Calcula la fecha de pago desde la emisión.</div>
+                </div>
+              </div>
+            </div>
+
+            {# Modo múltiple: elegir plazos #}
+            {% if modo != 'editar' %}
+            <div class="col-12" id="bloque-multiple" style="display:none">
+              <div class="border rounded p-3" style="background:#f8fafc">
+                <label class="form-label fw-semibold mb-2">Plazos a emitir (días desde la emisión)</label>
+                <div class="d-flex flex-wrap gap-3 mb-2">
+                  {% for p in plazos %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="plazos" value="{{ p }}"
+                           id="plazo_{{ p }}" {{ 'checked' if p in [30, 60, 90] }}>
+                    <label class="form-check-label" for="plazo_{{ p }}">{{ p }} días</label>
+                  </div>
+                  {% endfor %}
+                </div>
+                <label class="form-label" for="plazos_extra">Otros plazos (opcional)</label>
+                <input type="text" name="plazos_extra" id="plazos_extra" class="form-control"
+                       placeholder="Ej: 120, 150" autocomplete="off"
+                       value="{{ cheque.plazos_extra or '' }}">
+                <div class="form-text">
+                  Separá con comas. Si cargás un <strong>N° de cheque</strong> numérico, se numeran correlativos.
+                </div>
+              </div>
+            </div>
+            {% endif %}
 
             {# Gasto vinculado #}
             <div class="col-12">
@@ -163,6 +210,25 @@
 
 {% block scripts %}
 <script>
+function toggleMultiple(activo) {
+  var ind = document.getElementById('bloque-individual');
+  var mul = document.getElementById('bloque-multiple');
+  var fpago = document.getElementById('fecha_pago');
+  if (activo) {
+    if (ind) ind.style.display = 'none';
+    if (mul) mul.style.display = 'block';
+    if (fpago) fpago.required = false;
+  } else {
+    if (ind) ind.style.display = 'block';
+    if (mul) mul.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var chk = document.getElementById('emision_multiple');
+  if (chk) toggleMultiple(chk.checked);
+});
+
 function setPlazo(dias) {
   var emi = document.getElementById('fecha_emision').value;
   if (!emi) { alert('Cargá primero la fecha de emisión.'); return; }
@@ -199,11 +265,36 @@ document.getElementById('formCheque').addEventListener('submit', function(e) {
     return;
   }
   var emi = document.getElementById('fecha_emision').value;
-  var pago = document.getElementById('fecha_pago').value;
-  if (emi && pago && pago < emi) {
+  if (!emi) {
     e.preventDefault();
-    alert('La fecha de pago no puede ser anterior a la de emisión.');
+    alert('Cargá la fecha de emisión.');
     return;
+  }
+  var chk = document.getElementById('emision_multiple');
+  var esMultiple = chk && chk.checked;
+
+  if (esMultiple) {
+    var marcados = document.querySelectorAll('input[name="plazos"]:checked').length;
+    var extra = (document.getElementById('plazos_extra') || {}).value || '';
+    if (marcados === 0 && !extra.trim()) {
+      e.preventDefault();
+      alert('Elegí al menos un plazo para emitir varios cheques.');
+      return;
+    }
+  } else {
+    var pagoEl = document.getElementById('fecha_pago');
+    var pago = pagoEl.value;
+    if (!pago) {
+      e.preventDefault();
+      alert('Cargá la fecha de pago / débito.');
+      pagoEl.focus();
+      return;
+    }
+    if (emi && pago && pago < emi) {
+      e.preventDefault();
+      alert('La fecha de pago no puede ser anterior a la de emisión.');
+      return;
+    }
   }
   montoEl.value = montoToMachine(montoEl.value);
 });

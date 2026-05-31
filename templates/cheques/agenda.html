@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Agenda de cheques{% endblock %}
+{% block page_title %}Agenda de débitos{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('cheques.list_cheques') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Volver
+</a>
+{% endblock %}
+
+{% macro money(v) -%}
+{{ "{:,.2f}".format(v or 0).replace(",","X").replace(".",",").replace("X",".") }}
+{%- endmacro %}
+
+{% block content %}
+
+{# ── Navegación de mes ── #}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <a href="{{ url_for('cheques.agenda', anio=prev_anio, mes=prev_mes) }}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-chevron-left"></i>
+  </a>
+  <div class="text-center">
+    <div class="fw-bold" style="font-size:1.15rem">{{ mes_nombre }} {{ anio }}</div>
+    <div class="text-muted" style="font-size:.82rem">
+      Total a debitar en el mes:
+      <span class="fw-bold text-danger">$ {{ money(total_mes) }}</span>
+    </div>
+  </div>
+  <a href="{{ url_for('cheques.agenda', anio=next_anio, mes=next_mes) }}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-chevron-right"></i>
+  </a>
+</div>
+
+{# ── Calendario ── #}
+<div class="card">
+  <div class="card-body p-2 p-md-3">
+    <div class="table-responsive">
+      <table class="table table-bordered text-center mb-0" style="table-layout:fixed">
+        <thead>
+          <tr class="table-light">
+            <th style="font-size:.78rem">Lun</th>
+            <th style="font-size:.78rem">Mar</th>
+            <th style="font-size:.78rem">Mié</th>
+            <th style="font-size:.78rem">Jue</th>
+            <th style="font-size:.78rem">Vie</th>
+            <th style="font-size:.78rem">Sáb</th>
+            <th style="font-size:.78rem">Dom</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for semana in semanas %}
+          <tr>
+            {% for dia in semana %}
+            {% if dia == 0 %}
+            <td style="background:#f8fafc"></td>
+            {% else %}
+            {% set info = por_dia.get(dia) %}
+            {% set es_hoy = (dia == hoy.day and mes == hoy.month and anio == hoy.year) %}
+            <td class="align-top text-start p-1" style="height:96px;{{ 'background:#fff7ed' if info }}">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="badge {{ 'bg-primary' if es_hoy else 'bg-light text-secondary' }}"
+                      style="font-size:.72rem">{{ dia }}</span>
+                {% if info %}
+                <span class="text-danger fw-bold" style="font-size:.7rem">$ {{ money(info.total) }}</span>
+                {% endif %}
+              </div>
+              {% if info %}
+              {% for c in info['items'][:3] %}
+              <div class="text-truncate" style="font-size:.66rem"
+                   title="{{ c.proveedor_nombre or c.beneficiario or 'Sin beneficiario' }} · $ {{ money(c.monto) }}">
+                <i class="bi bi-bank text-muted"></i>
+                {{ c.proveedor_nombre or c.beneficiario or '—' }}
+              </div>
+              {% endfor %}
+              {% if info['items']|length > 3 %}
+              <div class="text-muted" style="font-size:.64rem">+{{ info['items']|length - 3 }} más…</div>
+              {% endif %}
+              {% endif %}
+            </td>
+            {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p class="text-muted mt-2" style="font-size:.8rem">
+  <i class="bi bi-info-circle me-1"></i>
+  Sólo se muestran cheques <strong>pendientes</strong>. Los días con débitos aparecen resaltados.
+</p>
+
+{% endblock %}

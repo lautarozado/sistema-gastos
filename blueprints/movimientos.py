@@ -89,10 +89,10 @@ def index():
     if mostrar_anulados != '1':
         q_ingresos += ' AND i.anulado = 0'
     if fecha_desde:
-        q_ingresos += ' AND i.fecha_desde >= ?'
+        q_ingresos += ' AND i.fecha_hasta >= ?'
         params_i.append(fecha_desde)
     if fecha_hasta:
-        q_ingresos += ' AND i.fecha_hasta <= ?'
+        q_ingresos += ' AND i.fecha_desde <= ?'
         params_i.append(fecha_hasta)
     if local_id:
         q_ingresos += ' AND i.local_id = ?'
@@ -188,8 +188,8 @@ def exportar_csv():
                WHERE 1=1'''
         p = []
         if mostrar_anulados != '1': q += ' AND i.anulado = 0'
-        if fecha_desde: q += ' AND i.fecha_desde >= ?'; p.append(fecha_desde)
-        if fecha_hasta: q += ' AND i.fecha_hasta <= ?'; p.append(fecha_hasta)
+        if fecha_desde: q += ' AND i.fecha_hasta >= ?'; p.append(fecha_desde)
+        if fecha_hasta: q += ' AND i.fecha_desde <= ?'; p.append(fecha_hasta)
         if local_id:    q += ' AND i.local_id = ?'; p.append(local_id)
         rows.extend([dict(r) for r in db.execute(q, p).fetchall()])
 

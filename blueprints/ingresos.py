@@ -51,10 +51,10 @@ def list_ingresos():
     if mostrar_anulados != '1':
         query += ' AND i.anulado = 0'
     if fecha_desde:
-        query += ' AND i.fecha_desde >= ?'
+        query += ' AND i.fecha_hasta >= ?'
         params.append(fecha_desde)
     if fecha_hasta:
-        query += ' AND i.fecha_hasta <= ?'
+        query += ' AND i.fecha_desde <= ?'
         params.append(fecha_hasta)
     if local_id:
         query += ' AND i.local_id = ?'
@@ -368,9 +368,9 @@ def exportar_csv():
     if mostrar_anulados != '1':
         query += ' AND i.anulado = 0'
     if fecha_desde:
-        query += ' AND i.fecha_desde >= ?'; params.append(fecha_desde)
+        query += ' AND i.fecha_hasta >= ?'; params.append(fecha_desde)
     if fecha_hasta:
-        query += ' AND i.fecha_hasta <= ?'; params.append(fecha_hasta)
+        query += ' AND i.fecha_desde <= ?'; params.append(fecha_hasta)
     if local_id:
         query += ' AND i.local_id = ?'; params.append(local_id)
     query += ' ORDER BY i.fecha_desde DESC'

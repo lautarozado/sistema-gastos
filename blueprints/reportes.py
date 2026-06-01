@@ -58,7 +58,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
     ).fetchone()['t']
 
     total_ingresos = db.execute(
-        f'SELECT COALESCE(SUM(i.total), 0) as t FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}',
+        f'SELECT COALESCE(SUM(i.total), 0) as t FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{if_str}',
         ip
     ).fetchone()['t']
 
@@ -82,7 +82,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
     ingresos_por_local = db.execute(
         f'''SELECT l.nombre, COALESCE(SUM(i.total), 0) as total, COUNT(*) as cantidad
             FROM ingresos i JOIN locales l ON i.local_id = l.id
-            WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
+            WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
             GROUP BY l.id, l.nombre ORDER BY total DESC''', ip
     ).fetchall()
 
@@ -97,7 +97,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         f'''SELECT dim.medio, COALESCE(SUM(dim.monto), 0) as total
             FROM detalle_ingresos_medios dim JOIN ingresos i ON dim.ingreso_id = i.id
             JOIN locales l ON i.local_id = l.id
-            WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
+            WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
             GROUP BY dim.medio''', ip
     ).fetchall()
 
@@ -121,7 +121,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
             FROM ingresos i
             JOIN locales l ON i.local_id = l.id
             LEFT JOIN categorias cat ON i.categoria_id = cat.id
-            WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
+            WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{if_str}
             ORDER BY i.fecha_desde DESC''', ip
     ).fetchall()
 
@@ -129,7 +129,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         f'SELECT COUNT(*) as c FROM gastos g JOIN locales l ON g.local_id = l.id WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}', gp
     ).fetchone()['c']
     count_ingresos = db.execute(
-        f'SELECT COUNT(*) as c FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{if_str}', ip
+        f'SELECT COUNT(*) as c FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{if_str}', ip
     ).fetchone()['c']
 
     db.close()

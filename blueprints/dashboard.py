@@ -56,7 +56,7 @@ def index():
     ).fetchone()['total']
 
     total_ingresos = db.execute(
-        f'SELECT COALESCE(SUM(i.total), 0) as total FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{local_filter_ingresos}',
+        f'SELECT COALESCE(SUM(i.total), 0) as total FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{local_filter_ingresos}',
         params_ingresos
     ).fetchone()['total']
 
@@ -79,7 +79,7 @@ def index():
         f'''SELECT l.nombre, COALESCE(SUM(i.total), 0) as total
             FROM ingresos i
             JOIN locales l ON i.local_id = l.id
-            WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{local_filter_ingresos}
+            WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{local_filter_ingresos}
             GROUP BY l.id, l.nombre
             ORDER BY total DESC''',
         params_ingresos
@@ -116,7 +116,7 @@ def index():
             [mes_ini.strftime('%Y-%m-%d'), mes_fin.strftime('%Y-%m-%d')]
         ).fetchone()['t']
         i = db.execute(
-            'SELECT COALESCE(SUM(i.total), 0) as t FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1',
+            'SELECT COALESCE(SUM(i.total), 0) as t FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1',
             [mes_ini.strftime('%Y-%m-%d'), mes_fin.strftime('%Y-%m-%d')]
         ).fetchone()['t']
         tendencia_gastos.append(round(g, 2))
@@ -155,7 +155,7 @@ def index():
             FROM detalle_ingresos_medios dim
             JOIN ingresos i ON dim.ingreso_id = i.id
             JOIN locales l ON i.local_id = l.id
-            WHERE i.fecha_desde >= ? AND i.fecha_hasta <= ? AND i.anulado = 0 AND l.activo = 1{local_filter_ingresos}
+            WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{local_filter_ingresos}
             GROUP BY dim.medio''',
         params_ingresos
     ).fetchall()

@@ -32,26 +32,33 @@
         </span>
       </div>
       <div class="local-body">
+        {% set desglose = s.get('desglose', []) %}
+        {% if not desglose %}
+        <div class="text-muted" style="font-size:.83rem">Sin movimientos registrados.</div>
+        {% endif %}
+        {% for d in desglose %}
+        {% set sym = 'USD' if d.moneda == 'USD' else moneda %}
+        {% if desglose|length > 1 %}
+        <div class="text-muted fw-semibold" style="font-size:.72rem;margin-top:{{ '.5rem' if not loop.first else '0' }}">
+          {{ d.moneda }}
+        </div>
+        {% endif %}
         <div class="local-stat">
-          <span class="local-stat-label"><i class="bi bi-arrow-up-circle me-1 text-success"></i>Ingresos totales</span>
-          <span class="fw-bold amount-income">
-            {{ moneda }} {{ "{:,.2f}".format(s.get('ingresos', 0)).replace(",","X").replace(".",",").replace("X",".") }}
-          </span>
+          <span class="local-stat-label"><i class="bi bi-arrow-up-circle me-1 text-success"></i>Ingresos</span>
+          <span class="fw-bold amount-income">{{ sym }} {{ "{:,.2f}".format(d.ingresos).replace(",","X").replace(".",",").replace("X",".") }}</span>
         </div>
         <div class="local-stat">
-          <span class="local-stat-label"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>Gastos totales</span>
-          <span class="fw-bold amount-expense">
-            {{ moneda }} {{ "{:,.2f}".format(s.get('gastos', 0)).replace(",","X").replace(".",",").replace("X",".") }}
-          </span>
+          <span class="local-stat-label"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>Gastos</span>
+          <span class="fw-bold amount-expense">{{ sym }} {{ "{:,.2f}".format(d.gastos).replace(",","X").replace(".",",").replace("X",".") }}</span>
         </div>
         <div class="local-stat" style="border-top:1px solid #e2e8f0;padding-top:.5rem;margin-top:.25rem">
-          <span class="local-stat-label fw-bold">Balance</span>
-          {% set bal = s.get('balance', 0) %}
-          <span class="fw-bold {{ 'amount-income' if bal >= 0 else 'amount-expense' }}">
-            {{ moneda }} {{ "{:,.2f}".format(bal|abs).replace(",","X").replace(".",",").replace("X",".") }}
-            {{ '↑' if bal >= 0 else '↓' }}
+          <span class="local-stat-label fw-bold">Balance {{ d.moneda if desglose|length > 1 }}</span>
+          <span class="fw-bold {{ 'amount-income' if d.balance >= 0 else 'amount-expense' }}">
+            {{ sym }} {{ "{:,.2f}".format(d.balance|abs).replace(",","X").replace(".",",").replace("X",".") }}
+            {{ '↑' if d.balance >= 0 else '↓' }}
           </span>
         </div>
+        {% endfor %}
         <div class="mt-3 d-flex gap-2">
           <button class="btn btn-sm btn-outline-primary flex-fill"
                   data-bs-toggle="modal" data-bs-target="#modalEditLocal"

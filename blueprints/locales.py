@@ -9,22 +9,31 @@ def index():
     db = get_db()
     locales = db.execute('SELECT * FROM locales ORDER BY activo DESC, nombre').fetchall()
 
-    # Stats por local
+    # Stats por local separados por moneda
     stats = {}
     for local in locales:
-        total_gastos = db.execute(
-            'SELECT COALESCE(SUM(monto), 0) as t FROM gastos WHERE local_id = ? AND anulado = 0',
+        filas_gastos = db.execute(
+            "SELECT COALESCE(moneda, 'ARS') as moneda, COALESCE(SUM(monto), 0) as t "
+            "FROM gastos WHERE local_id = ? AND anulado = 0 GROUP BY moneda",
             (local['id'],)
-        ).fetchone()['t']
-        total_ingresos = db.execute(
-            'SELECT COALESCE(SUM(total), 0) as t FROM ingresos WHERE local_id = ? AND anulado = 0',
+        ).fetchall()
+        filas_ingresos = db.execute(
+            "SELECT COALESCE(moneda, 'ARS') as moneda, COALESCE(SUM(total), 0) as t "
+            "FROM ingresos WHERE local_id = ? AND anulado = 0 GROUP BY moneda",
             (local['id'],)
-        ).fetchone()['t']
-        stats[local['id']] = {
-            'gastos': total_gastos,
-            'ingresos': total_ingresos,
-            'balance': total_ingresos - total_gastos,
-        }
+        ).fetchall()
+
+        gastos_por_moneda   = {r['moneda']: r['t'] for r in filas_gastos}
+        ingresos_por_moneda = {r['moneda']: r['t'] for r in filas_ingresos}
+        monedas = sorted(set(gastos_por_moneda) | set(ingresos_por_moneda))
+
+        desglose = []
+        for m in monedas:
+            g = gastos_por_moneda.get(m, 0)
+            i = ingresos_por_moneda.get(m, 0)
+            desglose.append({'moneda': m, 'gastos': g, 'ingresos': i, 'balance': i - g})
+
+        stats[local['id']] = {'desglose': desglose}
 
     db.close()
     return render_template('locales/index.html', locales=locales, stats=stats)

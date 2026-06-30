@@ -43,13 +43,13 @@ def get_form_data():
 
 
 def _categoria_requiere_proveedor(db, categoria_id):
-    """True si la categoría seleccionada es de proveedor (por nombre)."""
+    """True si la categoría tiene el flag requiere_proveedor activo."""
     if not categoria_id:
         return False
-    row = db.execute('SELECT nombre FROM categorias WHERE id = ?', (categoria_id,)).fetchone()
+    row = db.execute('SELECT requiere_proveedor FROM categorias WHERE id = ?', (categoria_id,)).fetchone()
     if not row:
         return False
-    return 'proveedor' in (row['nombre'] or '').lower()
+    return bool(row['requiere_proveedor'])
 
 
 def _parse_monto(val):
@@ -69,8 +69,15 @@ def _parse_monto(val):
 def list_gastos():
     db = get_db()
 
-    fecha_desde      = request.args.get('fecha_desde', '')
-    fecha_hasta      = request.args.get('fecha_hasta', '')
+    hoy = date.today()
+    # Si los parámetros no están en la URL, usar el mes actual por defecto.
+    # Si están presentes pero vacíos (?fecha_desde=&fecha_hasta=), mostrar todos.
+    if 'fecha_desde' not in request.args and 'fecha_hasta' not in request.args:
+        fecha_desde = hoy.replace(day=1).strftime('%Y-%m-%d')
+        fecha_hasta = hoy.strftime('%Y-%m-%d')
+    else:
+        fecha_desde = request.args.get('fecha_desde', '')
+        fecha_hasta = request.args.get('fecha_hasta', '')
     local_id         = request.args.get('local_id', '')
     categoria_id     = request.args.get('categoria_id', '')
     proveedor_id     = request.args.get('proveedor_id', '')

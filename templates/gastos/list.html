@@ -69,8 +69,13 @@
     </div>
     <div class="col-6 col-md-2 d-flex gap-2">
       <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Filtrar</button>
-      <a href="{{ url_for('gastos.list_gastos') }}" class="btn btn-outline-secondary btn-icon">
+      <a href="{{ url_for('gastos.list_gastos') }}" class="btn btn-outline-secondary btn-icon" title="Mes actual">
         <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+    <div class="col-12 col-md-auto">
+      <a href="{{ url_for('gastos.list_gastos') }}?fecha_desde=&fecha_hasta=" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-calendar-range me-1"></i>Ver todos
       </a>
     </div>
   </div>

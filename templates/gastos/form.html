@@ -54,7 +54,7 @@
                 <option value="">— Seleccionar categoría —</option>
                 {% for c in categorias %}
                 <option value="{{ c.id }}"
-                  data-requiere-prov="{{ '1' if 'proveedor' in c.nombre|lower else '0' }}"
+                  data-requiere-prov="{{ '1' if c.requiere_proveedor else '0' }}"
                   {{ 'selected' if gasto.categoria_id|string == c.id|string }}>
                   {{ c.nombre }}
                 </option>

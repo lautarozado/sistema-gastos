@@ -29,11 +29,16 @@
           <span class="badge bg-light text-secondary border" style="font-size:.68rem">
             {{ cat.tipo }}
           </span>
+          {% if cat.requiere_proveedor %}
+          <span class="badge bg-warning text-dark" style="font-size:.68rem" title="Al cargar un gasto con esta categoría, el proveedor es obligatorio">
+            <i class="bi bi-person-check me-1"></i>Requiere proveedor
+          </span>
+          {% endif %}
         </div>
         <div class="d-flex gap-1 align-items-center">
           <button class="btn btn-xs btn-outline-primary btn-icon"
                   data-bs-toggle="modal" data-bs-target="#modalEditCat"
-                  onclick="fillEditCat({{ cat.id }}, '{{ cat.nombre|e }}', '{{ cat.color or '#6c757d' }}', '{{ cat.tipo }}')"
+                  onclick="fillEditCat({{ cat.id }}, '{{ cat.nombre|e }}', '{{ cat.color or '#6c757d' }}', '{{ cat.tipo }}', {{ cat.requiere_proveedor or 0 }})"
                   title="Editar">
             <i class="bi bi-pencil"></i>
           </button>
@@ -192,6 +197,12 @@
               </div>
             </div>
           </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="requiere_proveedor" id="nuevaCatReqProv" value="1">
+            <label class="form-check-label" for="nuevaCatReqProv">
+              Requiere proveedor al cargar un gasto
+            </label>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -235,6 +246,12 @@
                 {% endfor %}
               </div>
             </div>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="requiere_proveedor" id="editCatReqProv" value="1">
+            <label class="form-check-label" for="editCatReqProv">
+              Requiere proveedor al cargar un gasto
+            </label>
           </div>
         </div>
         <div class="modal-footer">
@@ -302,11 +319,12 @@
 
 {% block scripts %}
 <script>
-function fillEditCat(id, nombre, color, tipo) {
+function fillEditCat(id, nombre, color, tipo, reqProv) {
   document.getElementById('formEditCat').action = '/categorias/' + id + '/editar';
   document.getElementById('editCatNombre').value = nombre;
   document.getElementById('editCatColor').value  = color;
   document.getElementById('editCatTipo').value   = tipo;
+  document.getElementById('editCatReqProv').checked = !!reqProv;
 }
 function fillEditSub(id, nombre) {
   document.getElementById('formEditSub').action   = '/categorias/subcategoria/' + id + '/editar';

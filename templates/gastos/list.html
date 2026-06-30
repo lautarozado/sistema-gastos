@@ -165,8 +165,11 @@
             {% endif %}
           </td>
           <td class="text-end text-nowrap amount-expense fw-bold">
+            {% if g.moneda == 'USD' %}
+            <span class="text-warning">USD {{ "{:,.2f}".format(g.monto).replace(",","X").replace(".",",").replace("X",".") }}</span>
+            {% else %}
             {{ moneda }} {{ "{:,.2f}".format(g.monto).replace(",","X").replace(".",",").replace("X",".") }}
-            {% if g.moneda == 'USD' %}<br><span class="badge bg-warning text-dark" style="font-size:.65rem">USD</span>{% endif %}
+            {% endif %}
             {% if g.es_recurrente %}<br><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:.65rem"><i class="bi bi-arrow-repeat"></i></span>{% endif %}
           </td>
           <td class="text-center text-nowrap">
@@ -200,19 +203,22 @@
         {% endfor %}
       </tbody>
       <tfoot>
+        {% set lbl_total = 'Total filtros' if total_paginas > 1 else 'Total' %}
         <tr class="table-light fw-bold d-none d-md-table-row">
-          <td colspan="8" class="text-end">Total ARS:</td>
+          <td colspan="8" class="text-end text-muted" style="font-size:.85rem">
+            {{ lbl_total }}{% if total_paginas > 1 %} <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.7rem">{{ total_registros }} gastos</span>{% endif %}:
+          </td>
           <td class="text-end text-nowrap amount-expense">
-            {{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}
-            {% if total_usd > 0 %}<br><small class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
+            {% if total_ars > 0 %}{{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}{% endif %}
+            {% if total_usd > 0 %}<br><span class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</span>{% endif %}
           </td>
           <td></td>
         </tr>
         <tr class="table-light fw-bold d-table-row d-md-none">
-          <td colspan="3" class="text-end">Total ARS:</td>
+          <td colspan="3" class="text-end text-muted" style="font-size:.8rem">{{ lbl_total }}:</td>
           <td class="text-end text-nowrap amount-expense">
-            {{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}
-            {% if total_usd > 0 %}<br><small class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
+            {% if total_ars > 0 %}{{ moneda }} {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}{% endif %}
+            {% if total_usd > 0 %}<br><span class="text-warning fw-bold">USD {{ "{:,.2f}".format(total_usd).replace(",","X").replace(".",",").replace("X",".") }}</span>{% endif %}
           </td>
           <td></td>
         </tr>

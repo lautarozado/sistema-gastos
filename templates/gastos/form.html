@@ -119,15 +119,21 @@
             {# Proveedor #}
             <div class="col-sm-6">
               <label class="form-label" for="proveedor_id">Proveedor</label>
-              <select name="proveedor_id" id="proveedor_id" class="form-select">
-                <option value="">— Sin proveedor —</option>
-                {% for p in proveedores %}
-                <option value="{{ p.id }}"
-                  {{ 'selected' if gasto.proveedor_id|string == p.id|string }}>
-                  {{ p.nombre }}
-                </option>
-                {% endfor %}
-              </select>
+              <div class="input-group">
+                <select name="proveedor_id" id="proveedor_id" class="form-select">
+                  <option value="">— Sin proveedor —</option>
+                  {% for p in proveedores %}
+                  <option value="{{ p.id }}"
+                    {{ 'selected' if gasto.proveedor_id|string == p.id|string }}>
+                    {{ p.nombre }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="btn btn-outline-secondary" title="Crear proveedor rápido"
+                        data-bs-toggle="modal" data-bs-target="#modalNuevoProv">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
             </div>
 
             {# Descripción #}
@@ -233,6 +239,35 @@
 </div>
 {% endblock %}
 
+{# Modal: crear proveedor rápido #}
+<div class="modal fade" id="modalNuevoProv" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-person-plus me-2 text-primary"></i>Nuevo proveedor</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
+          <input type="text" id="quickProvNombre" class="form-control" placeholder="Nombre del proveedor" autofocus>
+        </div>
+        <div class="mb-1">
+          <label class="form-label">Teléfono</label>
+          <input type="text" id="quickProvTel" class="form-control" placeholder="Opcional">
+        </div>
+        <div id="quickProvError" class="text-danger mt-2" style="font-size:.83rem;display:none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnQuickProvGuardar">
+          <i class="bi bi-check-lg me-1"></i>Crear y seleccionar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% block scripts %}
 <script>
 function toggleRecurrente(checked) {
@@ -321,6 +356,44 @@ document.addEventListener('DOMContentLoaded', function() {
   if (typeof initMontoInput === 'function') {
     initMontoInput('monto');
   }
+
+  // Proveedor rápido
+  document.getElementById('btnQuickProvGuardar').addEventListener('click', function() {
+    var nombre = document.getElementById('quickProvNombre').value.trim();
+    var tel    = document.getElementById('quickProvTel').value.trim();
+    var errDiv = document.getElementById('quickProvError');
+    errDiv.style.display = 'none';
+    if (!nombre) { errDiv.textContent = 'El nombre es obligatorio.'; errDiv.style.display = ''; return; }
+    var btn = this;
+    btn.disabled = true;
+    fetch('{{ url_for("proveedores.api_nuevo_proveedor") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'nombre=' + encodeURIComponent(nombre) + '&telefono=' + encodeURIComponent(tel)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) { errDiv.textContent = data.error; errDiv.style.display = ''; btn.disabled = false; return; }
+      var sel = document.getElementById('proveedor_id');
+      var opt = sel.querySelector('option[value="' + data.id + '"]');
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = data.id;
+        opt.textContent = data.nombre;
+        sel.appendChild(opt);
+      }
+      sel.value = data.id;
+      actualizarProveedorObligatorio();
+      bootstrap.Modal.getInstance(document.getElementById('modalNuevoProv')).hide();
+      document.getElementById('quickProvNombre').value = '';
+      document.getElementById('quickProvTel').value = '';
+      btn.disabled = false;
+    })
+    .catch(() => { errDiv.textContent = 'Error al crear el proveedor.'; errDiv.style.display = ''; btn.disabled = false; });
+  });
+  document.getElementById('modalNuevoProv').addEventListener('shown.bs.modal', function() {
+    document.getElementById('quickProvNombre').focus();
+  });
 
   document.getElementById('formGasto').addEventListener('submit', function(e) {
     var montoEl = document.getElementById('monto');

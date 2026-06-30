@@ -34,6 +34,48 @@
             <div class="form-text">Se muestra delante de todos los montos.</div>
           </div>
 
+          <hr class="my-3">
+          <div class="mb-3" style="font-size:.8rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em">
+            Datos del negocio (para reportes PDF)
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="cuit">CUIT</label>
+            <input type="text" name="cuit" id="cuit" class="form-control"
+                   value="{{ config.get('cuit', '') }}"
+                   placeholder="20-12345678-9" maxlength="20">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="condicion_iva">Condición IVA</label>
+            <select name="condicion_iva" id="condicion_iva" class="form-select">
+              {% set iva_actual = config.get('condicion_iva', '') %}
+              <option value="">— Sin especificar —</option>
+              {% for op in ['Responsable Inscripto', 'Monotributista', 'Exento', 'Consumidor Final'] %}
+              <option value="{{ op }}" {{ 'selected' if iva_actual == op }}>{{ op }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="direccion">Dirección</label>
+            <input type="text" name="direccion" id="direccion" class="form-control"
+                   value="{{ config.get('direccion', '') }}"
+                   placeholder="Av. Corrientes 1234, CABA" maxlength="120">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label" for="tipo_cambio_usd">Tipo de cambio USD → ARS</label>
+            <div class="input-group" style="max-width:220px">
+              <span class="input-group-text">1 USD =</span>
+              <input type="number" name="tipo_cambio_usd" id="tipo_cambio_usd" class="form-control"
+                     value="{{ config.get('tipo_cambio_usd', '') }}"
+                     placeholder="1000" min="0" step="0.01">
+              <span class="input-group-text">ARS</span>
+            </div>
+            <div class="form-text">Se usa en reportes para convertir montos en USD.</div>
+          </div>
+
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary px-4">
               <i class="bi bi-check-lg me-1"></i>Guardar configuración

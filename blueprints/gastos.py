@@ -121,11 +121,23 @@ def list_gastos():
 
     query += ' ORDER BY g.fecha DESC, g.created_at DESC'
 
-    gastos = db.execute(query, params).fetchall()
+    POR_PAGINA = 50
+    try:
+        pagina = max(1, int(request.args.get('pagina', 1)))
+    except (ValueError, TypeError):
+        pagina = 1
 
-    total_ars = sum(g['monto'] for g in gastos if not g['anulado'] and g['moneda'] == 'ARS')
-    total_usd = sum(g['monto'] for g in gastos if not g['anulado'] and g['moneda'] == 'USD')
-    total_filtrado = total_ars  # compatibilidad con tfoot
+    # Totales sobre todo el resultado (sin paginación)
+    todos = db.execute(query, params).fetchall()
+    total_ars = sum(g['monto'] for g in todos if not g['anulado'] and g['moneda'] == 'ARS')
+    total_usd = sum(g['monto'] for g in todos if not g['anulado'] and g['moneda'] == 'USD')
+    total_filtrado = total_ars
+    total_registros = len(todos)
+    total_paginas = max(1, (total_registros + POR_PAGINA - 1) // POR_PAGINA)
+    pagina = min(pagina, total_paginas)
+
+    offset = (pagina - 1) * POR_PAGINA
+    gastos = todos[offset: offset + POR_PAGINA]
 
     # Alerta de recurrentes vencidos o próximos en 7 días
     try:
@@ -154,6 +166,10 @@ def list_gastos():
         total_filtrado=total_filtrado,
         total_ars=total_ars,
         total_usd=total_usd,
+        total_registros=total_registros,
+        pagina=pagina,
+        total_paginas=total_paginas,
+        por_pagina=POR_PAGINA,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
         local_id=local_id,

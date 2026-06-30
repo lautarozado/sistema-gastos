@@ -118,13 +118,15 @@ def index():
     tendencia_labels = [m[2] for m in meses]
     tendencia_gastos = []
     tendencia_ingresos = []
+    tend_local_filter_g = f' AND g.local_id = {int(local_id)}' if local_id else ''
+    tend_local_filter_i = f' AND i.local_id = {int(local_id)}' if local_id else ''
     for mes_ini, mes_fin, _ in meses:
         g = db.execute(
-            'SELECT COALESCE(SUM(g.monto), 0) as t FROM gastos g JOIN locales l ON g.local_id = l.id WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1',
+            f'SELECT COALESCE(SUM(g.monto), 0) as t FROM gastos g JOIN locales l ON g.local_id = l.id WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{tend_local_filter_g}',
             [mes_ini.strftime('%Y-%m-%d'), mes_fin.strftime('%Y-%m-%d')]
         ).fetchone()['t']
         i = db.execute(
-            'SELECT COALESCE(SUM(i.total), 0) as t FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1',
+            f'SELECT COALESCE(SUM(i.total), 0) as t FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{tend_local_filter_i}',
             [mes_ini.strftime('%Y-%m-%d'), mes_fin.strftime('%Y-%m-%d')]
         ).fetchone()['t']
         tendencia_gastos.append(round(g, 2))

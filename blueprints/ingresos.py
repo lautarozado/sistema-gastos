@@ -356,9 +356,9 @@ def exportar_csv():
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     query = '''
-        SELECT i.fecha_desde, i.fecha_hasta, l.nombre as local,
+        SELECT i.id, i.fecha_desde, i.fecha_hasta, l.nombre as local,
                COALESCE(cat.nombre, '') as categoria,
-               i.total, i.observaciones
+               i.total, COALESCE(i.moneda, 'ARS') as moneda, i.observaciones
         FROM ingresos i
         JOIN locales l ON i.local_id = l.id
         LEFT JOIN categorias cat ON i.categoria_id = cat.id
@@ -376,6 +376,20 @@ def exportar_csv():
     query += ' ORDER BY i.fecha_desde DESC'
 
     rows = db.execute(query, params).fetchall()
+
+    # Medios de cobro por ingreso
+    medios_codigos = [cod for cod, _ in MEDIOS_COBRO]
+    medios_labels  = [lbl for _, lbl in MEDIOS_COBRO]
+    ids = [r['id'] for r in rows]
+    medios_map = {r['id']: {cod: 0.0 for cod in medios_codigos} for r in rows}
+    if ids:
+        placeholders = ','.join(['?'] * len(ids))
+        for dm in db.execute(
+            f'SELECT ingreso_id, medio, monto FROM detalle_ingresos_medios WHERE ingreso_id IN ({placeholders})',
+            ids
+        ).fetchall():
+            if dm['ingreso_id'] in medios_map and dm['medio'] in medios_map[dm['ingreso_id']]:
+                medios_map[dm['ingreso_id']][dm['medio']] = dm['monto']
     db.close()
 
     def _fmt(val):
@@ -384,14 +398,20 @@ def exportar_csv():
         s = str(val)[:10]; p = s.split('-')
         return f'{p[2]}/{p[1]}/{p[0]}' if len(p) == 3 else s
 
+    def _num(v):
+        return str(round(v, 2)).replace('.', ',')
+
     out = io.StringIO()
     w = csv.writer(out, delimiter=';')
-    w.writerow(['Fecha desde', 'Fecha hasta', 'Local', 'Categoría', 'Total', 'Observaciones'])
+    w.writerow(['Fecha desde', 'Fecha hasta', 'Local', 'Categoría', 'Total', 'Moneda']
+               + medios_labels + ['Observaciones'])
     for r in rows:
+        montos_medios = [_num(medios_map[r['id']].get(cod, 0)) for cod in medios_codigos]
         w.writerow([_fmt(r['fecha_desde']), _fmt(r['fecha_hasta']),
                     r['local'], r['categoria'],
-                    str(r['total']).replace('.', ','),
-                    r['observaciones'] or ''])
+                    _num(r['total']), r['moneda']]
+                   + montos_medios
+                   + [r['observaciones'] or ''])
 
     fname = f'ingresos_{fecha_desde or "todo"}_{fecha_hasta or "hoy"}.csv'
     return Response('﻿' + out.getvalue(), mimetype='text/csv; charset=utf-8',

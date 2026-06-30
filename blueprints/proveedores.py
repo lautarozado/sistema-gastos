@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from database import get_db
 
 bp = Blueprint('proveedores', __name__, url_prefix='/proveedores')
@@ -85,6 +85,34 @@ def toggle_proveedor(prov_id):
               'success' if nuevo else 'warning')
     db.close()
     return redirect(url_for('proveedores.index'))
+
+
+@bp.route('/api/nuevo', methods=['POST'])
+def api_nuevo_proveedor():
+    """Crea un proveedor rápido desde el formulario de gasto (responde JSON)."""
+    nombre = request.form.get('nombre', '').strip()
+    telefono = request.form.get('telefono', '').strip()
+    if not nombre:
+        return jsonify({'ok': False, 'error': 'El nombre es obligatorio.'}), 400
+    db = get_db()
+    existe = db.execute(
+        'SELECT id, nombre FROM proveedores WHERE nombre ILIKE ?', (nombre,)
+    ).fetchone()
+    if existe:
+        db.close()
+        return jsonify({'ok': True, 'id': existe['id'], 'nombre': existe['nombre'], 'existia': True})
+    db.execute(
+        'INSERT INTO proveedores (nombre, telefono) VALUES (?, ?)',
+        (nombre, telefono or None)
+    )
+    nuevo_id = db.execute('SELECT lastval() as id').fetchone()
+    db.commit()
+    # Obtener el id real del registro recién insertado
+    nuevo = db.execute(
+        'SELECT id, nombre FROM proveedores WHERE nombre ILIKE ? ORDER BY id DESC LIMIT 1', (nombre,)
+    ).fetchone()
+    db.close()
+    return jsonify({'ok': True, 'id': nuevo['id'], 'nombre': nuevo['nombre'], 'existia': False})
 
 
 @bp.route('/<int:prov_id>/eliminar', methods=['POST'])

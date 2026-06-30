@@ -8,25 +8,27 @@ bp = Blueprint('configuracion', __name__, url_prefix='/configuracion')
 def index():
     db = get_db()
 
+    CLAVES = [
+        'nombre_negocio', 'moneda_simbolo', 'cuit', 'condicion_iva',
+        'direccion', 'tipo_cambio_usd',
+    ]
+
     if request.method == 'POST':
         nombre_negocio = request.form.get('nombre_negocio', '').strip()
-        moneda_simbolo = request.form.get('moneda_simbolo', '$').strip()
-
         if not nombre_negocio:
             flash('El nombre del negocio es obligatorio.', 'danger')
             db.close()
             return redirect(url_for('configuracion.index'))
 
-        db.execute(
-            '''INSERT INTO configuracion (clave, valor, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = CURRENT_TIMESTAMP''',
-            ('nombre_negocio', nombre_negocio)
-        )
-        db.execute(
-            '''INSERT INTO configuracion (clave, valor, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = CURRENT_TIMESTAMP''',
-            ('moneda_simbolo', moneda_simbolo or '$')
-        )
+        for clave in CLAVES:
+            valor = request.form.get(clave, '').strip()
+            if clave == 'moneda_simbolo' and not valor:
+                valor = '$'
+            db.execute(
+                '''INSERT INTO configuracion (clave, valor, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+                   ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = CURRENT_TIMESTAMP''',
+                (clave, valor)
+            )
         db.commit()
         db.close()
         flash('Configuración guardada correctamente.', 'success')

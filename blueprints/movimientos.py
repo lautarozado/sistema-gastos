@@ -120,7 +120,9 @@ def index():
     balance_usd    = total_ingresos_usd - total_gastos_usd
 
     locales = db.execute('SELECT * FROM locales WHERE activo = 1 ORDER BY nombre').fetchall()
-    categorias = db.execute('SELECT * FROM categorias WHERE activo = 1 ORDER BY nombre').fetchall()
+    categorias = db.execute(
+        "SELECT * FROM categorias WHERE activo = 1 AND tipo IN ('gasto', 'ambos') ORDER BY nombre"
+    ).fetchall()
     proveedores = db.execute('SELECT * FROM proveedores WHERE activo = 1 ORDER BY nombre').fetchall()
     db.close()
 

@@ -135,7 +135,8 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Teléfono</label>
-            <input type="text" name="telefono" class="form-control" placeholder="Ej: 11 2345-6789">
+            <input type="tel" name="telefono" class="form-control" placeholder="Ej: 11 2345-6789"
+                   pattern="[\d\s\-\+\(\)]{6,20}" title="Solo números, espacios, guiones y paréntesis (6-20 caracteres)">
           </div>
           <div class="mb-3">
             <label class="form-label">Observaciones</label>
@@ -168,7 +169,8 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Teléfono</label>
-            <input type="text" name="telefono" id="editProvTel" class="form-control">
+            <input type="tel" name="telefono" id="editProvTel" class="form-control"
+                   pattern="[\d\s\-\+\(\)]{6,20}" title="Solo números, espacios, guiones y paréntesis (6-20 caracteres)">
           </div>
           <div class="mb-3">
             <label class="form-label">Observaciones</label>

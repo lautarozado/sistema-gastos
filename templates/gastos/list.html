@@ -99,7 +99,10 @@
   <div class="card-header d-flex align-items-center justify-content-between">
     <span>
       <i class="bi bi-arrow-down-circle-fill text-danger me-2"></i>
-      {{ gastos|length }} gasto{{ 's' if gastos|length != 1 }}
+      {{ total_registros }} gasto{{ 's' if total_registros != 1 }}
+      {% if total_paginas > 1 %}
+      <span class="text-muted ms-1" style="font-size:.8rem">— página {{ pagina }} de {{ total_paginas }}</span>
+      {% endif %}
     </span>
     {% if gastos %}
     <span class="text-muted" style="font-size:.82rem">
@@ -216,6 +219,24 @@
       </tfoot>
     </table>
   </div>
+  {% if total_paginas > 1 %}
+  <div class="d-flex justify-content-center align-items-center gap-2 py-3 border-top">
+    {% set qs_base = request.args.to_dict() %}
+    {% if pagina > 1 %}
+    {% set _ = qs_base.update({'pagina': pagina - 1}) %}
+    <a href="?{{ qs_base|urlencode }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-chevron-left"></i>
+    </a>
+    {% endif %}
+    <span class="text-muted" style="font-size:.85rem">{{ pagina }} / {{ total_paginas }}</span>
+    {% if pagina < total_paginas %}
+    {% set _ = qs_base.update({'pagina': pagina + 1}) %}
+    <a href="?{{ qs_base|urlencode }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-chevron-right"></i>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
   {% else %}
   <div class="empty-state">
     <i class="bi bi-arrow-down-circle"></i>

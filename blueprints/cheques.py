@@ -241,6 +241,8 @@ def _leer_form():
 
 def _validar(d):
     errors = []
+    if not d['numero']:
+        errors.append('El número de cheque es obligatorio.')
     if not d['fecha_emision']:
         errors.append('La fecha de emisión es obligatoria.')
     if not d['fecha_pago']:
@@ -285,6 +287,8 @@ def nuevo_cheque():
             plazos = sorted({p for p in plazos if p > 0})
 
             errors = []
+            if not d['numero']:
+                errors.append('El número de cheque es obligatorio.')
             if not d['fecha_emision']:
                 errors.append('La fecha de emisión es obligatoria.')
             if not plazos:
@@ -342,6 +346,18 @@ def nuevo_cheque():
                 bancos=BANCOS, estados=ESTADOS_CHEQUE, plazos=PLAZOS_CHEQUE,
                 cheque=request.form, modo='nuevo')
 
+        if d.get('gasto_id'):
+            gasto_ref = db.execute(
+                'SELECT monto FROM gastos WHERE id = ?', (d['gasto_id'],)
+            ).fetchone()
+            if gasto_ref and abs(d['monto'] - gasto_ref['monto']) > 0.01:
+                flash(
+                    f'Atención: el monto del cheque (${d["monto"]:,.2f}) no coincide con '
+                    f'el monto del gasto vinculado (${gasto_ref["monto"]:,.2f}). '
+                    f'Si es un pago parcial, ignorá este aviso.',
+                    'warning'
+                )
+
         db.execute(
             '''INSERT INTO cheques
                (numero, banco, tipo, beneficiario, proveedor_id, local_id, gasto_id,
@@ -388,6 +404,18 @@ def editar_cheque(cheque_id):
                 proveedores=proveedores, locales=locales, gastos=gastos,
                 bancos=BANCOS, estados=ESTADOS_CHEQUE, plazos=PLAZOS_CHEQUE,
                 cheque=request.form, modo='editar', cheque_id=cheque_id)
+
+        if d.get('gasto_id'):
+            gasto_ref = db.execute(
+                'SELECT monto FROM gastos WHERE id = ?', (d['gasto_id'],)
+            ).fetchone()
+            if gasto_ref and abs(d['monto'] - gasto_ref['monto']) > 0.01:
+                flash(
+                    f'Atención: el monto del cheque (${d["monto"]:,.2f}) no coincide con '
+                    f'el monto del gasto vinculado (${gasto_ref["monto"]:,.2f}). '
+                    f'Si es un pago parcial, ignorá este aviso.',
+                    'warning'
+                )
 
         db.execute(
             '''UPDATE cheques SET

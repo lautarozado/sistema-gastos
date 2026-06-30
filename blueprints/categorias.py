@@ -100,8 +100,11 @@ def eliminar_categoria(cat_id):
     en_uso = db.execute(
         'SELECT COUNT(*) as c FROM gastos WHERE categoria_id = ?', (cat_id,)
     ).fetchone()['c']
-    if en_uso:
-        flash('No se puede eliminar: la categoría tiene gastos asociados. Podés desactivarla.', 'danger')
+    en_uso_ingresos = db.execute(
+        'SELECT COUNT(*) as c FROM ingresos WHERE categoria_id = ?', (cat_id,)
+    ).fetchone()['c']
+    if en_uso or en_uso_ingresos:
+        flash('No se puede eliminar: la categoría tiene gastos o ingresos asociados. Podés desactivarla.', 'danger')
         db.close()
         return redirect(url_for('categorias.index'))
     db.execute('DELETE FROM subcategorias WHERE categoria_id = ?', (cat_id,))

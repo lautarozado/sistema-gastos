@@ -26,9 +26,9 @@
 
             {# Número + Banco #}
             <div class="col-sm-4">
-              <label class="form-label" for="numero">N° de cheque</label>
+              <label class="form-label" for="numero">N° de cheque <span class="text-danger">*</span></label>
               <input type="text" name="numero" id="numero" class="form-control"
-                     value="{{ cheque.numero or '' }}" maxlength="40" autocomplete="off">
+                     value="{{ cheque.numero or '' }}" maxlength="40" autocomplete="off" required>
             </div>
             <div class="col-sm-5">
               <label class="form-label" for="banco">Banco</label>

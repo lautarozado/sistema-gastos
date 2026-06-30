@@ -375,6 +375,13 @@ def anular_gasto(gasto_id):
 @bp.route('/<int:gasto_id>/eliminar', methods=['POST'])
 def eliminar_gasto(gasto_id):
     db = get_db()
+    en_uso_cheques = db.execute(
+        'SELECT COUNT(*) as c FROM cheques WHERE gasto_id = ?', (gasto_id,)
+    ).fetchone()['c']
+    if en_uso_cheques:
+        flash('No se puede eliminar: el gasto tiene cheques vinculados. Anulá el gasto o eliminá primero los cheques.', 'danger')
+        db.close()
+        return redirect(url_for('gastos.list_gastos'))
     db.execute('DELETE FROM gastos WHERE id = ?', (gasto_id,))
     db.commit()
     db.close()

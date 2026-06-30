@@ -93,8 +93,11 @@ def eliminar_proveedor(prov_id):
     en_uso = db.execute(
         'SELECT COUNT(*) as c FROM gastos WHERE proveedor_id = ?', (prov_id,)
     ).fetchone()['c']
-    if en_uso:
-        flash('No se puede eliminar: el proveedor tiene gastos asociados. Podés desactivarlo.', 'danger')
+    en_uso_cheques = db.execute(
+        'SELECT COUNT(*) as c FROM cheques WHERE proveedor_id = ?', (prov_id,)
+    ).fetchone()['c']
+    if en_uso or en_uso_cheques:
+        flash('No se puede eliminar: el proveedor tiene gastos o cheques asociados. Podés desactivarlo.', 'danger')
         db.close()
         return redirect(url_for('proveedores.index'))
     db.execute('DELETE FROM proveedores WHERE id = ?', (prov_id,))

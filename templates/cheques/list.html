@@ -33,37 +33,93 @@
 </div>
 {% endif %}
 
-{# ── Total a debitar por horizonte (solo pendientes) ── #}
-<div class="row g-2 mb-3">
+{# ── Flujo de caja separado: emitidos (por pagar) vs recibidos (por cobrar) ── #}
+<div class="row g-2 mb-2">
+  <div class="col-12">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <i class="bi bi-arrow-up-circle-fill text-danger"></i>
+      <span class="fw-semibold text-danger" style="font-size:.85rem">Por pagar (emitidos)</span>
+    </div>
+  </div>
   <div class="col-6 col-md-2">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.78rem">A debitar · 7 días</div>
-      <div class="fw-bold text-warning" style="font-size:1.05rem">$ {{ money(horizontes[7]) }}</div>
+    <div class="card h-100 border-danger-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">7 días</div>
+      <div class="fw-bold text-danger" style="font-size:1.05rem">$ {{ money(horizontes[7]) }}</div>
     </div></div>
   </div>
   <div class="col-6 col-md-2">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.78rem">A debitar · 30 días</div>
-      <div class="fw-bold" style="font-size:1.05rem">$ {{ money(horizontes[30]) }}</div>
+    <div class="card h-100 border-danger-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">30 días</div>
+      <div class="fw-bold text-danger" style="font-size:1.05rem">$ {{ money(horizontes[30]) }}</div>
     </div></div>
   </div>
   <div class="col-6 col-md-2">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.78rem">A debitar · 60 días</div>
-      <div class="fw-bold" style="font-size:1.05rem">$ {{ money(horizontes[60]) }}</div>
+    <div class="card h-100 border-danger-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">60 días</div>
+      <div class="fw-bold text-danger" style="font-size:1.05rem">$ {{ money(horizontes[60]) }}</div>
     </div></div>
   </div>
   <div class="col-6 col-md-2">
-    <div class="card h-100"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.78rem">A debitar · 90 días</div>
-      <div class="fw-bold" style="font-size:1.05rem">$ {{ money(horizontes[90]) }}</div>
+    <div class="card h-100 border-danger-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">90 días</div>
+      <div class="fw-bold text-danger" style="font-size:1.05rem">$ {{ money(horizontes[90]) }}</div>
     </div></div>
   </div>
   <div class="col-12 col-md-4">
-    <div class="card h-100 border-primary"><div class="card-body py-3">
-      <div class="text-muted" style="font-size:.78rem">Total pendiente (todos)</div>
-      <div class="fw-bold text-primary" style="font-size:1.2rem">$ {{ money(total_pendiente) }}</div>
+    <div class="card h-100 border-danger"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">Total emitidos pendientes</div>
+      <div class="fw-bold text-danger" style="font-size:1.2rem">$ {{ money(total_emitidos) }}</div>
     </div></div>
+  </div>
+</div>
+
+<div class="row g-2 mb-3">
+  <div class="col-12">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <i class="bi bi-arrow-down-circle-fill text-success"></i>
+      <span class="fw-semibold text-success" style="font-size:.85rem">Por cobrar (recibidos)</span>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100 border-success-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">7 días</div>
+      <div class="fw-bold text-success" style="font-size:1.05rem">$ {{ money(horizontes_recibidos[7]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100 border-success-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">30 días</div>
+      <div class="fw-bold text-success" style="font-size:1.05rem">$ {{ money(horizontes_recibidos[30]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100 border-success-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">60 días</div>
+      <div class="fw-bold text-success" style="font-size:1.05rem">$ {{ money(horizontes_recibidos[60]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100 border-success-subtle"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">90 días</div>
+      <div class="fw-bold text-success" style="font-size:1.05rem">$ {{ money(horizontes_recibidos[90]) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card h-100 border-success"><div class="card-body py-3">
+      <div class="text-muted" style="font-size:.78rem">Total recibidos pendientes</div>
+      <div class="fw-bold text-success" style="font-size:1.2rem">$ {{ money(total_recibidos) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-2">
+    {% set balance = total_recibidos - total_emitidos %}
+    <div class="card h-100 {{ 'border-success' if balance >= 0 else 'border-danger' }}">
+      <div class="card-body py-3">
+        <div class="text-muted" style="font-size:.78rem">Balance neto cheques</div>
+        <div class="fw-bold {{ 'text-success' if balance >= 0 else 'text-danger' }}" style="font-size:1.2rem">
+          {{ '+' if balance >= 0 else '' }}$ {{ money(balance) }}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -155,6 +211,7 @@
         <tr>
           <th>N°</th>
           <th>Banco</th>
+          <th>Tipo</th>
           <th>Beneficiario</th>
           <th class="d-none d-md-table-cell">Emisión</th>
           <th>Pago / Débito</th>
@@ -170,6 +227,17 @@
         <tr>
           <td class="text-nowrap">{{ c.numero or '—' }}</td>
           <td class="text-nowrap">{{ c.banco or '—' }}</td>
+          <td>
+            {% if (c.tipo or 'emitido') == 'recibido' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.7rem">
+              <i class="bi bi-arrow-down me-1"></i>Recibido
+            </span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:.7rem">
+              <i class="bi bi-arrow-up me-1"></i>Emitido
+            </span>
+            {% endif %}
+          </td>
           <td>{{ c.proveedor_nombre or c.beneficiario or '—' }}</td>
           <td class="d-none d-md-table-cell text-nowrap">{{ c.fecha_emision|fmt_date }}</td>
           <td class="text-nowrap {{ 'text-danger fw-semibold' if vencido }}">

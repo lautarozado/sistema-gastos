@@ -82,29 +82,40 @@ def list_cheques():
     query, params = _filtros_cheques(filtros)
     cheques = db.execute(query, params).fetchall()
 
-    # Flujo de caja: solo cheques pendientes
+    # Flujo de caja: solo cheques pendientes, separados por tipo
     pendientes = [c for c in cheques if c['estado'] == 'pendiente']
-    total_pendiente = sum(c['monto'] for c in pendientes)
+    emitidos   = [c for c in pendientes if (c['tipo'] or 'emitido') == 'emitido']
+    recibidos  = [c for c in pendientes if (c['tipo'] or 'emitido') == 'recibido']
+
+    total_emitidos  = sum(c['monto'] for c in emitidos)
+    total_recibidos = sum(c['monto'] for c in recibidos)
+    total_pendiente = total_emitidos  # compatibilidad
 
     hoy = date.today()
     horizontes = {
-        7:  _suma_hasta(pendientes, hoy, 7),
-        30: _suma_hasta(pendientes, hoy, 30),
-        60: _suma_hasta(pendientes, hoy, 60),
-        90: _suma_hasta(pendientes, hoy, 90),
+        7:  _suma_hasta(emitidos, hoy, 7),
+        30: _suma_hasta(emitidos, hoy, 30),
+        60: _suma_hasta(emitidos, hoy, 60),
+        90: _suma_hasta(emitidos, hoy, 90),
+    }
+    horizontes_recibidos = {
+        7:  _suma_hasta(recibidos, hoy, 7),
+        30: _suma_hasta(recibidos, hoy, 30),
+        60: _suma_hasta(recibidos, hoy, 60),
+        90: _suma_hasta(recibidos, hoy, 90),
     }
     vencidos = sum(
-        c['monto'] for c in pendientes
+        c['monto'] for c in emitidos
         if c['fecha_pago'] and str(c['fecha_pago'])[:10] < str(hoy)
     )
     cant_vencidos = sum(
-        1 for c in pendientes
+        1 for c in emitidos
         if c['fecha_pago'] and str(c['fecha_pago'])[:10] < str(hoy)
     )
 
-    # Total pendiente agrupado por beneficiario (proveedor o texto libre)
+    # Pendiente por beneficiario (solo emitidos — son los que hay que pagar)
     agrup = {}
-    for c in pendientes:
+    for c in emitidos:
         nombre = c['proveedor_nombre'] or c['beneficiario'] or 'Sin beneficiario'
         d = agrup.setdefault(nombre, {'monto': 0.0, 'cant': 0})
         d['monto'] += c['monto']; d['cant'] += 1
@@ -119,7 +130,11 @@ def list_cheques():
     return render_template('cheques/list.html',
         cheques=cheques, proveedores=proveedores, estados=ESTADOS_CHEQUE,
         bancos=BANCOS, filtros=filtros,
-        total_pendiente=total_pendiente, horizontes=horizontes,
+        total_pendiente=total_pendiente,
+        total_emitidos=total_emitidos,
+        total_recibidos=total_recibidos,
+        horizontes=horizontes,
+        horizontes_recibidos=horizontes_recibidos,
         por_proveedor=por_proveedor,
         vencidos=vencidos, cant_vencidos=cant_vencidos, hoy=hoy)
 

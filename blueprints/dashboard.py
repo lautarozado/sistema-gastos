@@ -97,15 +97,23 @@ def index():
     ).fetchall()
 
     # Tendencia mensual últimos 6 meses
+    def _primer_dia_hace_n_meses(n):
+        today = date.today()
+        month = today.month - n
+        year = today.year
+        while month <= 0:
+            month += 12
+            year -= 1
+        return date(year, month, 1)
+
     meses = []
     for i in range(5, -1, -1):
-        d = date.today().replace(day=1) - timedelta(days=i * 28)
-        mes_inicio = d.replace(day=1)
-        if d.month == 12:
-            mes_fin = d.replace(year=d.year + 1, month=1, day=1) - timedelta(days=1)
+        mes_inicio = _primer_dia_hace_n_meses(i)
+        if mes_inicio.month == 12:
+            mes_fin = date(mes_inicio.year + 1, 1, 1) - timedelta(days=1)
         else:
-            mes_fin = d.replace(month=d.month + 1, day=1) - timedelta(days=1)
-        meses.append((mes_inicio, mes_fin, d.strftime('%b %Y')))
+            mes_fin = date(mes_inicio.year, mes_inicio.month + 1, 1) - timedelta(days=1)
+        meses.append((mes_inicio, mes_fin, mes_inicio.strftime('%b %Y')))
 
     tendencia_labels = [m[2] for m in meses]
     tendencia_gastos = []

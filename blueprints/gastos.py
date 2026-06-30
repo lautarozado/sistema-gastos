@@ -234,6 +234,22 @@ def nuevo_gasto():
              descripcion, monto, medio_pago, observaciones, moneda,
              comprobante_path, es_recurrente, frecuencia, proxima_fecha)
         )
+
+        # Si viene de un recurrente, actualizar su proxima_fecha
+        recurrente_origen_id = request.form.get('recurrente_origen_id', '').strip()
+        if recurrente_origen_id:
+            origen = db.execute(
+                'SELECT frecuencia, proxima_fecha FROM gastos WHERE id = ? AND es_recurrente = 1',
+                (recurrente_origen_id,)
+            ).fetchone()
+            if origen:
+                nueva_proxima = _calcular_proxima_fecha(origen['frecuencia'], fecha)
+                db.execute(
+                    'UPDATE gastos SET proxima_fecha = ? WHERE id = ?',
+                    (nueva_proxima.strftime('%Y-%m-%d'), recurrente_origen_id)
+                )
+                flash(f'Próxima fecha del recurrente actualizada a {nueva_proxima.strftime("%d/%m/%Y")}.', 'info')
+
         db.commit()
         db.close()
         flash('Gasto registrado correctamente.', 'success')
@@ -341,6 +357,52 @@ def editar_gasto(gasto_id):
         gasto=gasto, modo='editar', gasto_id=gasto_id,
         subcategorias=subcategorias,
         comprobante_path_actual=gasto['comprobante_path'])
+
+
+def _calcular_proxima_fecha(frecuencia, desde):
+    """Calcula la siguiente fecha según la frecuencia del recurrente."""
+    from datetime import date as _date
+    import calendar as _cal
+    if isinstance(desde, str):
+        desde = _date.fromisoformat(str(desde)[:10])
+    if frecuencia == 'semanal':
+        return desde + timedelta(days=7)
+    if frecuencia == 'anual':
+        return desde.replace(year=desde.year + 1)
+    # mensual (default)
+    mes = desde.month + 1 if desde.month < 12 else 1
+    anio = desde.year + 1 if desde.month == 12 else desde.year
+    dia = min(desde.day, _cal.monthrange(anio, mes)[1])
+    return _date(anio, mes, dia)
+
+
+@bp.route('/<int:gasto_id>/desde-recurrente')
+def desde_recurrente(gasto_id):
+    """Abre el formulario de nuevo gasto pre-cargado con los datos del recurrente."""
+    db = get_db()
+    origen = db.execute('SELECT * FROM gastos WHERE id = ? AND es_recurrente = 1', (gasto_id,)).fetchone()
+    if not origen:
+        flash('Gasto recurrente no encontrado.', 'danger')
+        db.close()
+        return redirect(url_for('gastos.recurrentes'))
+    locales, categorias, proveedores = get_form_data()
+    subcategorias = []
+    if origen['subcategoria_id']:
+        subcategorias = db.execute(
+            'SELECT * FROM subcategorias WHERE categoria_id = ? AND activo = 1',
+            (origen['categoria_id'],)
+        ).fetchall()
+    db.close()
+    hoy = date.today().strftime('%Y-%m-%d')
+    pre = dict(origen)
+    pre['fecha'] = hoy
+    pre['es_recurrente'] = 0
+    return render_template('gastos/form.html',
+        locales=locales, categorias=categorias, proveedores=proveedores,
+        medios_pago=MEDIOS_PAGO, monedas=MONEDAS, frecuencias=FRECUENCIAS,
+        gasto=pre, modo='nuevo',
+        subcategorias=subcategorias,
+        recurrente_origen_id=gasto_id)
 
 
 @bp.route('/recurrentes')

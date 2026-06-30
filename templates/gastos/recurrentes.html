@@ -20,7 +20,7 @@
       {{ gastos|length }} gasto{{ 's' if gastos|length != 1 }} recurrente{{ 's' if gastos|length != 1 }}
     </span>
     <span class="text-muted" style="font-size:.82rem">
-      Solo activos — no se crean automáticamente
+      Hacé clic en "Registrar" para cargar el gasto con los datos pre-cargados
     </span>
   </div>
 
@@ -75,8 +75,12 @@
             {% if g.moneda == 'USD' %}<br><span class="badge bg-warning text-dark" style="font-size:.65rem">USD</span>{% endif %}
           </td>
           <td class="text-center text-nowrap">
+            <a href="{{ url_for('gastos.desde_recurrente', gasto_id=g.id) }}"
+               class="btn btn-xs btn-success" title="Registrar este gasto ahora">
+              <i class="bi bi-check-lg me-1"></i>Registrar
+            </a>
             <a href="{{ url_for('gastos.editar_gasto', gasto_id=g.id) }}"
-               class="btn btn-xs btn-outline-primary btn-icon" title="Editar">
+               class="btn btn-xs btn-outline-primary btn-icon ms-1" title="Editar recurrente">
               <i class="bi bi-pencil"></i>
             </a>
           </td>

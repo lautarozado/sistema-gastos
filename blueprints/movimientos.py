@@ -76,12 +76,13 @@ def index():
                i.observaciones as descripcion, i.anulado,
                COALESCE(i.moneda, 'ARS') as moneda,
                l.nombre as local_nombre,
-               'Ingreso' as categoria_nombre,
+               COALESCE(c.nombre, 'Ingreso') as categoria_nombre,
                NULL as subcategoria_nombre,
                NULL as proveedor_nombre,
                NULL as medio_pago
         FROM ingresos i
         JOIN locales l ON i.local_id = l.id
+        LEFT JOIN categorias c ON i.categoria_id = c.id
         WHERE 1=1
     '''
     params_i = []
@@ -97,6 +98,9 @@ def index():
     if local_id:
         q_ingresos += ' AND i.local_id = ?'
         params_i.append(local_id)
+    if categoria_id:
+        q_ingresos += ' AND i.categoria_id = ?'
+        params_i.append(categoria_id)
 
     movimientos = []
     if tipo != 'ingreso':

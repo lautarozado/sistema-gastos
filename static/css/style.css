@@ -405,11 +405,11 @@ textarea.form-control{resize:vertical;min-height:80px}
   overflow:hidden;margin-bottom:1rem;
 }
 .cat-header{
-  display:flex;align-items:center;justify-content:space-between;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;
   padding:.75rem 1.125rem;
   border-bottom:1px solid var(--border);
 }
-.cat-name{display:flex;align-items:center;gap:.625rem;font-weight:700;font-size:.92rem}
+.cat-name{display:flex;flex-wrap:wrap;align-items:center;gap:.375rem;font-weight:700;font-size:.92rem}
 .cat-body{padding:.75rem 1.125rem}
 .sub-item{
   display:flex;align-items:center;justify-content:space-between;

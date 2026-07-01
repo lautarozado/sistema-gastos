@@ -41,7 +41,7 @@
           </span>
           {% endif %}
         </div>
-        <div class="d-flex gap-1 align-items-center">
+        <div class="d-flex gap-1 align-items-center flex-shrink-0">
           <button class="btn btn-xs btn-outline-primary btn-icon"
                   data-bs-toggle="modal" data-bs-target="#modalEditCat"
                   onclick="fillEditCat({{ cat.id }}, '{{ cat.nombre|e }}', '{{ cat.color or '#6c757d' }}', '{{ cat.tipo }}', {{ cat.requiere_proveedor or 0 }}, '{{ cat.clasificacion or 'gasto' }}')"

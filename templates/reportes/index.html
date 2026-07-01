@@ -12,18 +12,14 @@
 {% block content %}
 
 {# ── Período rápido ───────────────────────────── #}
+{% set bqs = ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&proveedor_id=' ~ proveedor_id if proveedor_id) ~ ('&clasificacion=' ~ clasificacion if clasificacion) %}
 <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
   <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
-  <a href="?periodo=hoy{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
-     class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
-  <a href="?periodo=7d{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
-     class="btn btn-sm {{ 'btn-secondary' if periodo == '7d' else 'btn-outline-secondary' }}">7 días</a>
-  <a href="?periodo=30d{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
-     class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
-  <a href="?periodo=90d{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
-     class="btn btn-sm {{ 'btn-secondary' if periodo == '90d' else 'btn-outline-secondary' }}">90 días</a>
-  <a href="?periodo=todo{% if local_id %}&local_id={{ local_id }}{% endif %}{% if categoria_id %}&categoria_id={{ categoria_id }}{% endif %}{% if proveedor_id %}&proveedor_id={{ proveedor_id }}{% endif %}"
-     class="btn btn-sm {{ 'btn-secondary' if periodo == 'todo' else 'btn-outline-secondary' }}">Todo</a>
+  <a href="?periodo=hoy{{ bqs }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
+  <a href="?periodo=7d{{ bqs }}"  class="btn btn-sm {{ 'btn-secondary' if periodo == '7d'  else 'btn-outline-secondary' }}">7 días</a>
+  <a href="?periodo=30d{{ bqs }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
+  <a href="?periodo=90d{{ bqs }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '90d' else 'btn-outline-secondary' }}">90 días</a>
+  <a href="?periodo=todo{{ bqs }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'todo' else 'btn-outline-secondary' }}">Todo</a>
 </div>
 
 {# ── Filtros ──────────────────────────────────── #}
@@ -72,6 +68,14 @@
         <i class="bi bi-x-lg"></i>
       </a>
     </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Clasificación egreso</label>
+      <select name="clasificacion" class="form-select">
+        <option value="" {{ 'selected' if not clasificacion }}>Todos (Gastos + Costos)</option>
+        <option value="gasto" {{ 'selected' if clasificacion == 'gasto' }}>Solo Gastos</option>
+        <option value="costo" {{ 'selected' if clasificacion == 'costo' }}>Solo Costos</option>
+      </select>
+    </div>
   </div>
 </form>
 
@@ -88,11 +92,20 @@
   </div>
   <div class="col-6 col-lg-3">
     <div class="report-box">
-      <div class="label"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>Total Gastos</div>
+      <div class="label"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>Total Egresos</div>
       <div class="value text-danger">
         {{ moneda }} {{ "{:,.2f}".format(data.total_gastos).replace(",","X").replace(".",",").replace("X",".") }}
       </div>
-      <div class="text-muted" style="font-size:.78rem;margin-top:.25rem">{{ data.count_gastos }} gasto{{ 's' if data.count_gastos != 1 }}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-top:.25rem">{{ data.count_gastos }} egreso{{ 's' if data.count_gastos != 1 }}</div>
+      {% if data.gastos_por_clasificacion|length > 1 %}
+      <div class="mt-1 d-flex gap-2 flex-wrap">
+        {% for cl in data.gastos_por_clasificacion %}
+        <span class="badge {{ 'bg-danger-subtle text-danger border-danger-subtle' if cl.clasificacion == 'gasto' else 'bg-warning-subtle text-warning-emphasis border-warning-subtle' }} border" style="font-size:.68rem">
+          {{ 'Gastos' if cl.clasificacion == 'gasto' else 'Costos' }}: {{ moneda }} {{ "{:,.2f}".format(cl.total).replace(",","X").replace(".",",").replace("X",".") }}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
   {% set bal = data.balance %}
@@ -119,7 +132,7 @@
   <div class="col-lg-5">
     <div class="card h-100">
       <div class="card-header fw-bold">
-        <i class="bi bi-pie-chart-fill me-2 text-danger"></i>Gastos por Categoría
+        <i class="bi bi-pie-chart-fill me-2 text-danger"></i>Egresos por Categoría
       </div>
       <div class="card-body d-flex align-items-center justify-content-center">
         {% if data.total_gastos > 0 %}
@@ -176,7 +189,7 @@
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-header fw-bold">
-        <i class="bi bi-tags me-2 text-danger"></i>Gastos por Categoría
+        <i class="bi bi-tags me-2 text-danger"></i>Egresos por Categoría
       </div>
       <div class="table-responsive">
         <table class="table">
@@ -238,7 +251,7 @@
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-header fw-bold">
-        <i class="bi bi-shop me-2 text-danger"></i>Gastos por Local
+        <i class="bi bi-shop me-2 text-danger"></i>Egresos por Local
       </div>
       <div class="table-responsive">
         <table class="table">
@@ -270,7 +283,7 @@
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-header fw-bold">
-        <i class="bi bi-building me-2 text-danger"></i>Gastos por Proveedor
+        <i class="bi bi-building me-2 text-danger"></i>Egresos por Proveedor
       </div>
       <div class="table-responsive">
         <table class="table">

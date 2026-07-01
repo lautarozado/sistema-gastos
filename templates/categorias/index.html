@@ -26,11 +26,17 @@
           {% if not cat.activo %}
           <span class="badge bg-secondary" style="font-size:.68rem">Inactiva</span>
           {% endif %}
+          {% set tipo_label = {'gasto': 'Egreso', 'ingreso': 'Ingreso', 'ambos': 'Ambos'} %}
           <span class="badge bg-light text-secondary border" style="font-size:.68rem">
-            {{ cat.tipo }}
+            {{ tipo_label.get(cat.tipo, cat.tipo) }}
           </span>
+          {% if cat.tipo in ('gasto', 'ambos') %}
+          {% set clasif_cfg = {'gasto': ('bg-danger-subtle text-danger border-danger-subtle', 'Gasto'), 'costo': ('bg-warning-subtle text-warning-emphasis border-warning-subtle', 'Costo')} %}
+          {% set cc = clasif_cfg.get(cat.clasificacion or 'gasto', ('bg-secondary-subtle text-secondary border-secondary-subtle', cat.clasificacion or 'Gasto')) %}
+          <span class="badge border {{ cc[0] }}" style="font-size:.68rem">{{ cc[1] }}</span>
+          {% endif %}
           {% if cat.requiere_proveedor %}
-          <span class="badge bg-warning text-dark" style="font-size:.68rem" title="Al cargar un gasto con esta categoría, el proveedor es obligatorio">
+          <span class="badge bg-warning text-dark" style="font-size:.68rem" title="Al cargar un egreso con esta categoría, el proveedor es obligatorio">
             <i class="bi bi-person-check me-1"></i>Requiere proveedor
           </span>
           {% endif %}
@@ -38,7 +44,7 @@
         <div class="d-flex gap-1 align-items-center">
           <button class="btn btn-xs btn-outline-primary btn-icon"
                   data-bs-toggle="modal" data-bs-target="#modalEditCat"
-                  onclick="fillEditCat({{ cat.id }}, '{{ cat.nombre|e }}', '{{ cat.color or '#6c757d' }}', '{{ cat.tipo }}', {{ cat.requiere_proveedor or 0 }})"
+                  onclick="fillEditCat({{ cat.id }}, '{{ cat.nombre|e }}', '{{ cat.color or '#6c757d' }}', '{{ cat.tipo }}', {{ cat.requiere_proveedor or 0 }}, '{{ cat.clasificacion or 'gasto' }}')"
                   title="Editar">
             <i class="bi bi-pencil"></i>
           </button>
@@ -179,10 +185,17 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Tipo</label>
-            <select name="tipo" class="form-select">
-              <option value="gasto">Gasto</option>
+            <select name="tipo" class="form-select" id="nuevaCatTipo" onchange="toggleClasif('nuevaCatTipo','nuevaClasifRow')">
+              <option value="gasto">Egreso</option>
               <option value="ingreso">Ingreso</option>
               <option value="ambos">Ambos</option>
+            </select>
+          </div>
+          <div class="mb-3" id="nuevaClasifRow">
+            <label class="form-label">Clasificación contable</label>
+            <select name="clasificacion" class="form-select" id="nuevaCatClasif">
+              <option value="gasto">Gasto (operativo / indirecto)</option>
+              <option value="costo">Costo (directo / producción)</option>
             </select>
           </div>
           <div class="mb-3">
@@ -200,7 +213,7 @@
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="requiere_proveedor" id="nuevaCatReqProv" value="1">
             <label class="form-check-label" for="nuevaCatReqProv">
-              Requiere proveedor al cargar un gasto
+              Requiere proveedor al cargar un egreso
             </label>
           </div>
         </div>
@@ -229,10 +242,17 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Tipo</label>
-            <select name="tipo" id="editCatTipo" class="form-select">
-              <option value="gasto">Gasto</option>
+            <select name="tipo" id="editCatTipo" class="form-select" onchange="toggleClasif('editCatTipo','editClasifRow')">
+              <option value="gasto">Egreso</option>
               <option value="ingreso">Ingreso</option>
               <option value="ambos">Ambos</option>
+            </select>
+          </div>
+          <div class="mb-3" id="editClasifRow">
+            <label class="form-label">Clasificación contable</label>
+            <select name="clasificacion" class="form-select" id="editCatClasif">
+              <option value="gasto">Gasto (operativo / indirecto)</option>
+              <option value="costo">Costo (directo / producción)</option>
             </select>
           </div>
           <div class="mb-3">
@@ -250,7 +270,7 @@
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="requiere_proveedor" id="editCatReqProv" value="1">
             <label class="form-check-label" for="editCatReqProv">
-              Requiere proveedor al cargar un gasto
+              Requiere proveedor al cargar un egreso
             </label>
           </div>
         </div>
@@ -319,12 +339,18 @@
 
 {% block scripts %}
 <script>
-function fillEditCat(id, nombre, color, tipo, reqProv) {
+function toggleClasif(tipoId, rowId) {
+  var tipo = document.getElementById(tipoId).value;
+  document.getElementById(rowId).style.display = (tipo === 'gasto' || tipo === 'ambos') ? '' : 'none';
+}
+function fillEditCat(id, nombre, color, tipo, reqProv, clasificacion) {
   document.getElementById('formEditCat').action = '/categorias/' + id + '/editar';
   document.getElementById('editCatNombre').value = nombre;
   document.getElementById('editCatColor').value  = color;
   document.getElementById('editCatTipo').value   = tipo;
   document.getElementById('editCatReqProv').checked = !!reqProv;
+  document.getElementById('editCatClasif').value = clasificacion || 'gasto';
+  toggleClasif('editCatTipo', 'editClasifRow');
 }
 function fillEditSub(id, nombre) {
   document.getElementById('formEditSub').action   = '/categorias/subcategoria/' + id + '/editar';
@@ -334,5 +360,9 @@ function openSubModal(catId) {
   document.getElementById('formNuevaSub').action = '/categorias/' + catId + '/subcategoria/nueva';
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevaSub')).show();
 }
+// Estado inicial del modal nueva
+document.addEventListener('DOMContentLoaded', function() {
+  toggleClasif('nuevaCatTipo', 'nuevaClasifRow');
+});
 </script>
 {% endblock %}

@@ -36,6 +36,7 @@ def nueva_categoria():
     color = request.form.get('color', '#6c757d').strip()
     tipo = request.form.get('tipo', 'gasto').strip()
     requiere_proveedor = 1 if request.form.get('requiere_proveedor') == '1' else 0
+    clasificacion = request.form.get('clasificacion', 'gasto').strip() if tipo in ('gasto', 'ambos') else 'gasto'
 
     if not nombre:
         flash('El nombre de la categoría es obligatorio.', 'danger')
@@ -51,8 +52,8 @@ def nueva_categoria():
         return redirect(url_for('categorias.index'))
 
     db.execute(
-        'INSERT INTO categorias (nombre, color, tipo, requiere_proveedor) VALUES (?, ?, ?, ?)',
-        (nombre, color, tipo, requiere_proveedor)
+        'INSERT INTO categorias (nombre, color, tipo, requiere_proveedor, clasificacion) VALUES (?, ?, ?, ?, ?)',
+        (nombre, color, tipo, requiere_proveedor, clasificacion)
     )
     db.commit()
     db.close()
@@ -66,6 +67,7 @@ def editar_categoria(cat_id):
     color = request.form.get('color', '#6c757d').strip()
     tipo = request.form.get('tipo', 'gasto').strip()
     requiere_proveedor = 1 if request.form.get('requiere_proveedor') == '1' else 0
+    clasificacion = request.form.get('clasificacion', 'gasto').strip() if tipo in ('gasto', 'ambos') else 'gasto'
 
     if not nombre:
         flash('El nombre es obligatorio.', 'danger')
@@ -73,8 +75,8 @@ def editar_categoria(cat_id):
 
     db = get_db()
     db.execute(
-        'UPDATE categorias SET nombre=?, color=?, tipo=?, requiere_proveedor=? WHERE id=?',
-        (nombre, color, tipo, requiere_proveedor, cat_id)
+        'UPDATE categorias SET nombre=?, color=?, tipo=?, requiere_proveedor=?, clasificacion=? WHERE id=?',
+        (nombre, color, tipo, requiere_proveedor, clasificacion, cat_id)
     )
     db.commit()
     db.close()

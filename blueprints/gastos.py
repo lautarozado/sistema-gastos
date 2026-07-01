@@ -81,6 +81,7 @@ def list_gastos():
     local_id         = request.args.get('local_id', '')
     categoria_id     = request.args.get('categoria_id', '')
     proveedor_id     = request.args.get('proveedor_id', '')
+    clasificacion    = request.args.get('clasificacion', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     query = '''
@@ -90,6 +91,7 @@ def list_gastos():
                g.es_recurrente,
                l.nombre as local_nombre,
                c.nombre as categoria_nombre,
+               COALESCE(c.clasificacion, 'gasto') as clasificacion,
                sc.nombre as subcategoria_nombre,
                p.nombre as proveedor_nombre,
                (SELECT COUNT(*) FROM cheques ch WHERE ch.gasto_id = g.id) as cheques_count,
@@ -118,6 +120,8 @@ def list_gastos():
         query += ' AND g.categoria_id = ?'; params.append(categoria_id)
     if proveedor_id:
         query += ' AND g.proveedor_id = ?'; params.append(proveedor_id)
+    if clasificacion:
+        query += ' AND COALESCE(c.clasificacion, \'gasto\') = ?'; params.append(clasificacion)
 
     query += ' ORDER BY g.fecha DESC, g.created_at DESC'
 
@@ -175,6 +179,7 @@ def list_gastos():
         local_id=local_id,
         categoria_id=categoria_id,
         proveedor_id=proveedor_id,
+        clasificacion=clasificacion,
         mostrar_anulados=mostrar_anulados,
         recurrentes_pendientes=recurrentes_pendientes,
     )
@@ -487,8 +492,11 @@ def exportar_csv():
     proveedor_id     = request.args.get('proveedor_id', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
+    clasificacion_csv = request.args.get('clasificacion', '')
+
     query = '''
         SELECT g.fecha, l.nombre as local, c.nombre as categoria,
+               COALESCE(c.clasificacion, 'gasto') as clasificacion,
                COALESCE(sc.nombre, '') as subcategoria,
                COALESCE(p.nombre, '') as proveedor,
                COALESCE(g.descripcion, '') as descripcion,
@@ -515,10 +523,14 @@ def exportar_csv():
         query += ' AND g.categoria_id = ?'; params.append(categoria_id)
     if proveedor_id:
         query += ' AND g.proveedor_id = ?'; params.append(proveedor_id)
+    if clasificacion_csv:
+        query += " AND COALESCE(c.clasificacion, 'gasto') = ?"; params.append(clasificacion_csv)
     query += ' ORDER BY g.fecha DESC'
 
     rows = db.execute(query, params).fetchall()
     db.close()
+
+    _CLASIF_LABEL = {'gasto': 'Gasto', 'costo': 'Costo'}
 
     def _fmt(val):
         if val is None: return ''
@@ -528,11 +540,12 @@ def exportar_csv():
 
     out = io.StringIO()
     w = csv.writer(out, delimiter=';')
-    w.writerow(['Fecha', 'Local', 'Categoría', 'Subcategoría', 'Proveedor',
+    w.writerow(['Fecha', 'Local', 'Categoría', 'Clasificación', 'Subcategoría', 'Proveedor',
                 'Descripción', 'Monto', 'Moneda', 'Medio de pago', 'Observaciones'])
     for r in rows:
-        w.writerow([_fmt(r['fecha']), r['local'], r['categoria'], r['subcategoria'],
-                    r['proveedor'], r['descripcion'],
+        w.writerow([_fmt(r['fecha']), r['local'], r['categoria'],
+                    _CLASIF_LABEL.get(r['clasificacion'], r['clasificacion']),
+                    r['subcategoria'], r['proveedor'], r['descripcion'],
                     str(r['monto']).replace('.', ','), r['moneda'],
                     r['medio_pago'], r['observaciones']])
 

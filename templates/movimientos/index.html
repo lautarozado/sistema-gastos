@@ -11,7 +11,7 @@
   <i class="bi bi-plus-lg me-1"></i>Ingreso
 </a>
 <a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-sm btn-danger">
-  <i class="bi bi-plus-lg me-1"></i>Gasto
+  <i class="bi bi-plus-lg me-1"></i>Egreso
 </a>
 {% endblock %}
 
@@ -20,7 +20,7 @@
 {# ── Período rápido ──────────────────────────────── #}
 <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
   <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
-  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
+  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
   <a href="?periodo=hoy{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
   <a href="?periodo=7d{{ qp }}"  class="btn btn-sm {{ 'btn-secondary' if periodo == '7d'  else 'btn-outline-secondary' }}">7 días</a>
   <a href="?periodo=30d{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
@@ -44,7 +44,7 @@
       <select name="tipo" class="form-select">
         <option value="" {{ 'selected' if tipo == '' }}>Todos</option>
         <option value="ingreso" {{ 'selected' if tipo == 'ingreso' }}>Solo Ingresos</option>
-        <option value="gasto"   {{ 'selected' if tipo == 'gasto'   }}>Solo Gastos</option>
+        <option value="gasto"   {{ 'selected' if tipo == 'gasto'   }}>Solo Egresos</option>
       </select>
     </div>
     <div class="col-6 col-md-2">
@@ -74,12 +74,17 @@
       </a>
     </div>
   </div>
-  <div class="mt-2">
+  <div class="mt-2 d-flex align-items-center gap-3 flex-wrap">
     <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" name="mostrar_anulados" id="chkAnul" value="1"
              {{ 'checked' if mostrar_anulados == '1' }} onchange="this.form.submit()">
       <label class="form-check-label" for="chkAnul" style="font-size:.82rem">Mostrar anulados</label>
     </div>
+    <select name="clasificacion" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+      <option value="" {{ 'selected' if not clasificacion }}>Todas las clasificaciones</option>
+      <option value="gasto" {{ 'selected' if clasificacion == 'gasto' }}>Solo Gastos</option>
+      <option value="costo" {{ 'selected' if clasificacion == 'costo' }}>Solo Costos</option>
+    </select>
   </div>
 </form>
 
@@ -101,7 +106,7 @@
     <div class="stat-card py-3">
       <div class="stat-icon expense" style="width:38px;height:38px;font-size:1rem"><i class="bi bi-arrow-down"></i></div>
       <div class="stat-body">
-        <div class="stat-label">Gastos</div>
+        <div class="stat-label">Egresos</div>
         <div class="stat-value expense" style="font-size:1.15rem">
           {{ moneda }} {{ "{:,.2f}".format(total_gastos).replace(",","X").replace(".",",").replace("X",".") }}
           {% if total_gastos_usd > 0 %}<br><small class="text-warning fw-bold" style="font-size:.8rem">USD {{ "{:,.2f}".format(total_gastos_usd).replace(",","X").replace(".",",").replace("X",".") }}</small>{% endif %}
@@ -153,7 +158,10 @@
             {% if m.tipo == 'ingreso' %}
             <span class="badge-income"><i class="bi bi-arrow-up me-1"></i>Ingreso</span>
             {% else %}
-            <span class="badge-expense"><i class="bi bi-arrow-down me-1"></i>Gasto</span>
+            <span class="badge-expense"><i class="bi bi-arrow-down me-1"></i>Egreso</span>
+            {% if m.clasificacion == 'costo' %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:.65rem">Costo</span>
+            {% endif %}
             {% endif %}
             {% if m.anulado %}<span class="badge bg-secondary ms-1" style="font-size:.65rem">ANULADO</span>{% endif %}
           </td>
@@ -198,7 +206,7 @@
         <i class="bi bi-plus me-1"></i>Nuevo Ingreso
       </a>
       <a href="{{ url_for('gastos.nuevo_gasto') }}" class="btn btn-danger btn-sm">
-        <i class="bi bi-plus me-1"></i>Nuevo Gasto
+        <i class="bi bi-plus me-1"></i>Nuevo Egreso
       </a>
     </div>
   </div>

@@ -226,6 +226,8 @@ def init_db():
         "ALTER TABLE ingresos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
         # Flag configurable: categoría requiere proveedor
         'ALTER TABLE categorias ADD COLUMN IF NOT EXISTS requiere_proveedor INTEGER DEFAULT 0',
+        # Clasificación contable de la categoría: gasto (operativo) o costo (directo)
+        "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS clasificacion TEXT DEFAULT 'gasto'",
     ]
     for m in migraciones:
         db.execute(m)
@@ -239,6 +241,7 @@ def init_db():
     db.execute("UPDATE gastos SET es_recurrente = 0 WHERE es_recurrente IS NULL")
     # Backfill: categorías cuyo nombre contenía "proveedor" pasan a tener el flag activo
     db.execute("UPDATE categorias SET requiere_proveedor = 1 WHERE nombre ILIKE '%proveedor%' AND requiere_proveedor = 0")
+    db.execute("UPDATE categorias SET clasificacion = 'gasto' WHERE clasificacion IS NULL")
 
     defaults = [
         ('nombre_negocio', 'Libreria Centro'),

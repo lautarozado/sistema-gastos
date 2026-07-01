@@ -32,6 +32,7 @@ def index():
     categoria_id = request.args.get('categoria_id', '')
     proveedor_id = request.args.get('proveedor_id', '')
     tipo = request.args.get('tipo', '')  # 'ingreso' | 'gasto' | ''
+    clasificacion = request.args.get('clasificacion', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     # Gastos
@@ -40,6 +41,7 @@ def index():
                COALESCE(g.moneda, 'ARS') as moneda,
                l.nombre as local_nombre,
                c.nombre as categoria_nombre,
+               COALESCE(c.clasificacion, 'gasto') as clasificacion,
                sc.nombre as subcategoria_nombre,
                p.nombre as proveedor_nombre,
                g.medio_pago
@@ -69,6 +71,9 @@ def index():
     if proveedor_id:
         q_gastos += ' AND g.proveedor_id = ?'
         params_g.append(proveedor_id)
+    if clasificacion:
+        q_gastos += " AND COALESCE(c.clasificacion, 'gasto') = ?"
+        params_g.append(clasificacion)
 
     # Ingresos
     q_ingresos = '''
@@ -77,6 +82,7 @@ def index():
                COALESCE(i.moneda, 'ARS') as moneda,
                l.nombre as local_nombre,
                COALESCE(c.nombre, 'Ingreso') as categoria_nombre,
+               NULL as clasificacion,
                NULL as subcategoria_nombre,
                NULL as proveedor_nombre,
                NULL as medio_pago
@@ -143,6 +149,7 @@ def index():
         categoria_id=categoria_id,
         proveedor_id=proveedor_id,
         tipo=tipo,
+        clasificacion=clasificacion,
         mostrar_anulados=mostrar_anulados,
         periodo=periodo,
     )
@@ -168,7 +175,7 @@ def exportar_csv():
     rows = []
 
     if tipo != 'ingreso':
-        q = '''SELECT g.fecha, 'Gasto' as tipo, l.nombre as local,
+        q = '''SELECT g.fecha, 'Egreso' as tipo, l.nombre as local,
                       c.nombre as categoria, COALESCE(g.descripcion,'') as descripcion,
                       g.monto, COALESCE(g.medio_pago,'') as medio_pago
                FROM gastos g

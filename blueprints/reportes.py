@@ -32,10 +32,11 @@ def build_filters(request):
     categoria_id = request.args.get('categoria_id', '')
     proveedor_id = request.args.get('proveedor_id', '')
     tipo = request.args.get('tipo', '')
-    return fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo
+    clasificacion = request.args.get('clasificacion', '')
+    return fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion
 
 
-def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id):
+def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion=''):
     db = get_db()
 
     # Params
@@ -51,6 +52,8 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         gf += ' AND g.categoria_id = ?'; gp.append(categoria_id)
     if proveedor_id:
         gf += ' AND g.proveedor_id = ?'; gp.append(proveedor_id)
+    if clasificacion:
+        gf += " AND COALESCE(c.clasificacion, 'gasto') = ?"; gp.append(clasificacion)
 
     total_gastos = db.execute(
         f'SELECT COALESCE(SUM(g.monto), 0) as t FROM gastos g JOIN locales l ON g.local_id = l.id WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}',
@@ -132,6 +135,15 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         f'SELECT COUNT(*) as c FROM ingresos i JOIN locales l ON i.local_id = l.id WHERE i.fecha_hasta >= ? AND i.fecha_desde <= ? AND i.anulado = 0 AND l.activo = 1{if_str}', ip
     ).fetchone()['c']
 
+    gastos_por_clasificacion = db.execute(
+        f'''SELECT COALESCE(c.clasificacion, 'gasto') as clasificacion,
+               COALESCE(SUM(g.monto), 0) as total, COUNT(*) as cantidad
+            FROM gastos g JOIN categorias c ON g.categoria_id = c.id
+            JOIN locales l ON g.local_id = l.id
+            WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}
+            GROUP BY c.clasificacion ORDER BY total DESC''', gp
+    ).fetchall()
+
     db.close()
     return {
         'total_gastos': total_gastos,
@@ -140,6 +152,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         'count_gastos': count_gastos,
         'count_ingresos': count_ingresos,
         'gastos_por_cat': [dict(r) for r in gastos_por_cat],
+        'gastos_por_clasificacion': [dict(r) for r in gastos_por_clasificacion],
         'gastos_por_proveedor': [dict(r) for r in gastos_por_proveedor],
         'ingresos_por_local': [dict(r) for r in ingresos_por_local],
         'gastos_por_local': [dict(r) for r in gastos_por_local],
@@ -151,7 +164,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
 
 @bp.route('/')
 def index():
-    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo = build_filters(request)
+    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion = build_filters(request)
     _, _, periodo = resolve_periodo(request)
 
     db = get_db()
@@ -160,7 +173,7 @@ def index():
     proveedores = db.execute('SELECT * FROM proveedores WHERE activo = 1 ORDER BY nombre').fetchall()
     db.close()
 
-    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id)
+    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion)
 
     chart_cat = {
         'labels': [r['nombre'] for r in data['gastos_por_cat']],
@@ -186,6 +199,7 @@ def index():
         local_id=local_id,
         categoria_id=categoria_id,
         proveedor_id=proveedor_id,
+        clasificacion=clasificacion,
         periodo=periodo,
         medios_cobro=MEDIOS_COBRO,
         chart_cat=json.dumps(chart_cat),
@@ -196,7 +210,7 @@ def index():
 
 @bp.route('/pdf')
 def generar_pdf():
-    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo = build_filters(request)
+    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion = build_filters(request)
 
     db = get_db()
     config = {r['clave']: r['valor'] for r in db.execute('SELECT clave, valor FROM configuracion').fetchall()}
@@ -210,7 +224,7 @@ def generar_pdf():
         cat_nombre = cat['nombre'] if cat else ''
     db.close()
 
-    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id)
+    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion)
 
     from pdf_generator import generar_pdf_reporte
     pdf_bytes = generar_pdf_reporte(

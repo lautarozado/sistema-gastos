@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS categorias (
     color TEXT DEFAULT '#6c757d',
     activo INTEGER DEFAULT 1,
     requiere_proveedor INTEGER DEFAULT 0,
+    clasificacion TEXT DEFAULT 'gasto',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS subcategorias (

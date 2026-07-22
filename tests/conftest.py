@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS gastos (
     es_recurrente INTEGER DEFAULT 0,
     frecuencia TEXT,
     proxima_fecha DATE,
+    es_fijo INTEGER DEFAULT 0,
     moneda TEXT DEFAULT 'ARS',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

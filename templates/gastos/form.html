@@ -171,6 +171,19 @@
               <div class="form-text">Formatos: JPG, PNG, PDF.</div>
             </div>
 
+            {# Gasto fijo #}
+            <div class="col-12">
+              <div class="form-check mb-1">
+                <input class="form-check-input" type="checkbox" name="es_fijo"
+                       id="es_fijo" value="1"
+                       {{ 'checked' if gasto.es_fijo == 1 or gasto.es_fijo == '1' }}>
+                <label class="form-check-label fw-semibold" for="es_fijo">
+                  <i class="bi bi-pin-angle-fill me-1 text-primary"></i>Gasto fijo
+                </label>
+                <div class="form-text">Marcá esta casilla si es un gasto fijo (alquiler, sueldos, servicios…) para poder filtrarlo después.</div>
+              </div>
+            </div>
+
             {# Recurrente #}
             <div class="col-12">
               <div class="form-check mb-2">

@@ -221,6 +221,8 @@ def init_db():
         'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS es_recurrente INTEGER DEFAULT 0',
         'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS frecuencia TEXT',
         'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS proxima_fecha DATE',
+        # Gasto fijo (clasificación manual para filtrar gastos fijos vs. variables)
+        'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS es_fijo INTEGER DEFAULT 0',
         # Moneda por transacción (ARS / USD)
         "ALTER TABLE gastos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
         "ALTER TABLE ingresos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
@@ -239,6 +241,7 @@ def init_db():
     db.execute("UPDATE gastos SET moneda = 'ARS' WHERE moneda IS NULL")
     db.execute("UPDATE ingresos SET moneda = 'ARS' WHERE moneda IS NULL")
     db.execute("UPDATE gastos SET es_recurrente = 0 WHERE es_recurrente IS NULL")
+    db.execute("UPDATE gastos SET es_fijo = 0 WHERE es_fijo IS NULL")
     # Backfill: categorías cuyo nombre contenía "proveedor" pasan a tener el flag activo
     db.execute("UPDATE categorias SET requiere_proveedor = 1 WHERE nombre ILIKE '%proveedor%' AND requiere_proveedor = 0")
     db.execute("UPDATE categorias SET clasificacion = 'gasto' WHERE clasificacion IS NULL")

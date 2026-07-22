@@ -20,7 +20,7 @@
 {# ── Período rápido ──────────────────────────────── #}
 <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
   <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
-  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&fija=' ~ fija if fija) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
+  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&fija=' ~ fija if fija) ~ ('&medio_pago=' ~ medio_pago|urlencode if medio_pago) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
   <a href="?periodo=hoy{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
   <a href="?periodo=7d{{ qp }}"  class="btn btn-sm {{ 'btn-secondary' if periodo == '7d'  else 'btn-outline-secondary' }}">7 días</a>
   <a href="?periodo=30d{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
@@ -90,6 +90,13 @@
       <option value="" {{ 'selected' if fija == '' }}>Fijas y no fijas</option>
       <option value="1" {{ 'selected' if fija == '1' }}>Egresos fijos</option>
       <option value="0" {{ 'selected' if fija == '0' }}>Egresos no fijos</option>
+    </select>
+    <select name="medio_pago" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()"
+            title="Filtrar egresos por medio de pago (ej: eCheq)">
+      <option value="" {{ 'selected' if not medio_pago }}>Todos los medios de pago</option>
+      {% for m in medios_pago %}
+      <option value="{{ m }}" {{ 'selected' if medio_pago == m }}>{{ m }}</option>
+      {% endfor %}
     </select>
   </div>
 </form>

@@ -12,7 +12,7 @@
 {% block content %}
 
 {# ── Período rápido ───────────────────────────── #}
-{% set bqs = ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&proveedor_id=' ~ proveedor_id if proveedor_id) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&fija=' ~ fija if fija) %}
+{% set bqs = ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&proveedor_id=' ~ proveedor_id if proveedor_id) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&fija=' ~ fija if fija) ~ ('&medio_pago=' ~ medio_pago|urlencode if medio_pago) %}
 <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
   <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
   <a href="?periodo=hoy{{ bqs }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
@@ -82,6 +82,15 @@
         <option value="" {{ 'selected' if fija == '' }}>Todas</option>
         <option value="1" {{ 'selected' if fija == '1' }}>Solo fijas</option>
         <option value="0" {{ 'selected' if fija == '0' }}>Solo no fijas</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Medio de pago (egresos)</label>
+      <select name="medio_pago" class="form-select">
+        <option value="" {{ 'selected' if not medio_pago }}>Todos</option>
+        {% for m in medios_pago %}
+        <option value="{{ m }}" {{ 'selected' if medio_pago == m }}>{{ m }}</option>
+        {% endfor %}
       </select>
     </div>
   </div>

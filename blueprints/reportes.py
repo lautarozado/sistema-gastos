@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, make_response
-from database import get_db, MEDIOS_COBRO
+from database import get_db, MEDIOS_COBRO, MEDIOS_PAGO
 from datetime import date, timedelta
 import json
 
@@ -34,10 +34,11 @@ def build_filters(request):
     tipo = request.args.get('tipo', '')
     clasificacion = request.args.get('clasificacion', '')
     fija = request.args.get('fija', '')
-    return fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija
+    medio_pago = request.args.get('medio_pago', '')
+    return fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija, medio_pago
 
 
-def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion='', fija=''):
+def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion='', fija='', medio_pago=''):
     db = get_db()
 
     # Params
@@ -62,6 +63,9 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         gf += ' AND EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
     elif fija == '0':
         gf += ' AND NOT EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
+    # Filtro por medio de pago (solo aplica a egresos; los ingresos no lo tienen)
+    if medio_pago:
+        gf += ' AND g.medio_pago = ?'; gp.append(medio_pago)
 
     total_gastos = db.execute(
         f'SELECT COALESCE(SUM(g.monto), 0) as t FROM gastos g JOIN locales l ON g.local_id = l.id WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}',
@@ -172,7 +176,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
 
 @bp.route('/')
 def index():
-    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija = build_filters(request)
+    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija, medio_pago = build_filters(request)
     _, _, periodo = resolve_periodo(request)
 
     db = get_db()
@@ -181,7 +185,7 @@ def index():
     proveedores = db.execute('SELECT * FROM proveedores WHERE activo = 1 ORDER BY nombre').fetchall()
     db.close()
 
-    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion, fija)
+    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion, fija, medio_pago)
 
     chart_cat = {
         'labels': [r['nombre'] for r in data['gastos_por_cat']],
@@ -209,6 +213,8 @@ def index():
         proveedor_id=proveedor_id,
         clasificacion=clasificacion,
         fija=fija,
+        medio_pago=medio_pago,
+        medios_pago=MEDIOS_PAGO,
         periodo=periodo,
         medios_cobro=MEDIOS_COBRO,
         chart_cat=json.dumps(chart_cat),
@@ -219,7 +225,7 @@ def index():
 
 @bp.route('/pdf')
 def generar_pdf():
-    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija = build_filters(request)
+    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija, medio_pago = build_filters(request)
 
     db = get_db()
     config = {r['clave']: r['valor'] for r in db.execute('SELECT clave, valor FROM configuracion').fetchall()}
@@ -233,7 +239,7 @@ def generar_pdf():
         cat_nombre = cat['nombre'] if cat else ''
     db.close()
 
-    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion, fija)
+    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion, fija, medio_pago)
 
     fija_label = {'1': 'Solo fijas', '0': 'Solo no fijas'}.get(fija, '')
 
@@ -246,6 +252,7 @@ def generar_pdf():
         local_nombre=local_nombre,
         cat_nombre=cat_nombre,
         fija_label=fija_label,
+        medio_pago=medio_pago,
     )
 
     response = make_response(pdf_bytes)

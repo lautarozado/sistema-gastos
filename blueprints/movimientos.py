@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, Response
-from database import get_db
+from database import get_db, MEDIOS_PAGO
 from datetime import date, timedelta
 
 bp = Blueprint('movimientos', __name__, url_prefix='/movimientos')
@@ -34,6 +34,7 @@ def index():
     tipo = request.args.get('tipo', '')  # 'ingreso' | 'gasto' | ''
     clasificacion = request.args.get('clasificacion', '')
     fija = request.args.get('fija', '')  # '' | '1' (fijas) | '0' (no fijas)
+    medio_pago = request.args.get('medio_pago', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     # Gastos
@@ -82,6 +83,9 @@ def index():
         q_gastos += ' AND COALESCE(sc.es_fija, 0) = 1'
     elif fija == '0':
         q_gastos += ' AND COALESCE(sc.es_fija, 0) = 0'
+    if medio_pago:
+        q_gastos += ' AND g.medio_pago = ?'
+        params_g.append(medio_pago)
 
     # Ingresos
     q_ingresos = '''
@@ -160,6 +164,8 @@ def index():
         tipo=tipo,
         clasificacion=clasificacion,
         fija=fija,
+        medio_pago=medio_pago,
+        medios_pago=MEDIOS_PAGO,
         mostrar_anulados=mostrar_anulados,
         periodo=periodo,
     )
@@ -175,6 +181,7 @@ def exportar_csv():
     categoria_id     = request.args.get('categoria_id', '')
     tipo             = request.args.get('tipo', '')
     fija             = request.args.get('fija', '')
+    medio_pago       = request.args.get('medio_pago', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     def _fmt(val):
@@ -203,6 +210,8 @@ def exportar_csv():
             q += ' AND EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
         elif fija == '0':
             q += ' AND NOT EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
+        if medio_pago:
+            q += ' AND g.medio_pago = ?'; p.append(medio_pago)
         rows.extend([dict(r) for r in db.execute(q, p).fetchall()])
 
     if tipo != 'gasto':

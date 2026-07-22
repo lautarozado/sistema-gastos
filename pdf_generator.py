@@ -28,7 +28,7 @@ def fmt(valor, simbolo='$'):
     return f'{simbolo} {valor:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
-def generar_pdf_reporte(config, data, fecha_desde, fecha_hasta, local_nombre='', cat_nombre=''):
+def generar_pdf_reporte(config, data, fecha_desde, fecha_hasta, local_nombre='', cat_nombre='', fija_label=''):
     buffer = io.BytesIO()
     nombre_negocio = config.get('nombre_negocio', 'Mi Negocio')
     simbolo = config.get('moneda_simbolo', '$')
@@ -127,6 +127,8 @@ def generar_pdf_reporte(config, data, fecha_desde, fecha_hasta, local_nombre='',
         filtros.append(f'Local: {local_nombre}')
     if cat_nombre:
         filtros.append(f'Categoría: {cat_nombre}')
+    if fija_label:
+        filtros.append(f'Egresos: {fija_label}')
 
     filtros_str = '   |   '.join(filtros)
     story.append(Paragraph(f'Filtros aplicados: {filtros_str}', style_small))

@@ -122,6 +122,7 @@ def eliminar_categoria(cat_id):
 @bp.route('/<int:cat_id>/subcategoria/nueva', methods=['POST'])
 def nueva_subcategoria(cat_id):
     nombre = request.form.get('nombre', '').strip()
+    es_fija = 1 if request.form.get('es_fija') == '1' else 0
     if not nombre:
         flash('El nombre de la subcategoría es obligatorio.', 'danger')
         return redirect(url_for('categorias.index'))
@@ -137,8 +138,8 @@ def nueva_subcategoria(cat_id):
         return redirect(url_for('categorias.index'))
 
     db.execute(
-        'INSERT INTO subcategorias (categoria_id, nombre) VALUES (?, ?)',
-        (cat_id, nombre)
+        'INSERT INTO subcategorias (categoria_id, nombre, es_fija) VALUES (?, ?, ?)',
+        (cat_id, nombre, es_fija)
     )
     db.commit()
     db.close()
@@ -149,11 +150,12 @@ def nueva_subcategoria(cat_id):
 @bp.route('/subcategoria/<int:sub_id>/editar', methods=['POST'])
 def editar_subcategoria(sub_id):
     nombre = request.form.get('nombre', '').strip()
+    es_fija = 1 if request.form.get('es_fija') == '1' else 0
     if not nombre:
         flash('El nombre es obligatorio.', 'danger')
         return redirect(url_for('categorias.index'))
     db = get_db()
-    db.execute('UPDATE subcategorias SET nombre = ? WHERE id = ?', (nombre, sub_id))
+    db.execute('UPDATE subcategorias SET nombre = ?, es_fija = ? WHERE id = ?', (nombre, es_fija, sub_id))
     db.commit()
     db.close()
     flash('Subcategoría actualizada.', 'success')

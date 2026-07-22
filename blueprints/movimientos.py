@@ -33,6 +33,7 @@ def index():
     proveedor_id = request.args.get('proveedor_id', '')
     tipo = request.args.get('tipo', '')  # 'ingreso' | 'gasto' | ''
     clasificacion = request.args.get('clasificacion', '')
+    fija = request.args.get('fija', '')  # '' | '1' (fijas) | '0' (no fijas)
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     # Gastos
@@ -43,6 +44,7 @@ def index():
                c.nombre as categoria_nombre,
                COALESCE(c.clasificacion, 'gasto') as clasificacion,
                sc.nombre as subcategoria_nombre,
+               COALESCE(sc.es_fija, 0) as es_fija,
                p.nombre as proveedor_nombre,
                g.medio_pago
         FROM gastos g
@@ -74,6 +76,12 @@ def index():
     if clasificacion:
         q_gastos += " AND COALESCE(c.clasificacion, 'gasto') = ?"
         params_g.append(clasificacion)
+    # Filtro fija/no-fija: se basa en la subcategoría actual del egreso.
+    # "No fija" incluye egresos sin subcategoría (sc.es_fija NULL -> 0).
+    if fija == '1':
+        q_gastos += ' AND COALESCE(sc.es_fija, 0) = 1'
+    elif fija == '0':
+        q_gastos += ' AND COALESCE(sc.es_fija, 0) = 0'
 
     # Ingresos
     q_ingresos = '''
@@ -84,6 +92,7 @@ def index():
                COALESCE(c.nombre, 'Ingreso') as categoria_nombre,
                NULL as clasificacion,
                NULL as subcategoria_nombre,
+               0 as es_fija,
                NULL as proveedor_nombre,
                NULL as medio_pago
         FROM ingresos i
@@ -150,6 +159,7 @@ def index():
         proveedor_id=proveedor_id,
         tipo=tipo,
         clasificacion=clasificacion,
+        fija=fija,
         mostrar_anulados=mostrar_anulados,
         periodo=periodo,
     )
@@ -164,6 +174,7 @@ def exportar_csv():
     local_id         = request.args.get('local_id', '')
     categoria_id     = request.args.get('categoria_id', '')
     tipo             = request.args.get('tipo', '')
+    fija             = request.args.get('fija', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     def _fmt(val):
@@ -188,6 +199,10 @@ def exportar_csv():
         if fecha_hasta: q += ' AND g.fecha <= ?'; p.append(fecha_hasta)
         if local_id:    q += ' AND g.local_id = ?'; p.append(local_id)
         if categoria_id: q += ' AND g.categoria_id = ?'; p.append(categoria_id)
+        if fija == '1':
+            q += ' AND EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
+        elif fija == '0':
+            q += ' AND NOT EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
         rows.extend([dict(r) for r in db.execute(q, p).fetchall()])
 
     if tipo != 'gasto':

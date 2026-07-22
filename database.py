@@ -136,6 +136,7 @@ def init_db():
             categoria_id INTEGER NOT NULL,
             nombre TEXT NOT NULL,
             activo INTEGER DEFAULT 1,
+            es_fija INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (categoria_id) REFERENCES categorias(id)
         )''',
@@ -221,8 +222,6 @@ def init_db():
         'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS es_recurrente INTEGER DEFAULT 0',
         'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS frecuencia TEXT',
         'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS proxima_fecha DATE',
-        # Gasto fijo (clasificación manual para filtrar gastos fijos vs. variables)
-        'ALTER TABLE gastos ADD COLUMN IF NOT EXISTS es_fijo INTEGER DEFAULT 0',
         # Moneda por transacción (ARS / USD)
         "ALTER TABLE gastos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
         "ALTER TABLE ingresos ADD COLUMN IF NOT EXISTS moneda TEXT DEFAULT 'ARS'",
@@ -230,6 +229,8 @@ def init_db():
         'ALTER TABLE categorias ADD COLUMN IF NOT EXISTS requiere_proveedor INTEGER DEFAULT 0',
         # Clasificación contable de la categoría: gasto (operativo) o costo (directo)
         "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS clasificacion TEXT DEFAULT 'gasto'",
+        # Subcategoría fija (Sí/No) para distinguir gastos fijos de variables
+        'ALTER TABLE subcategorias ADD COLUMN IF NOT EXISTS es_fija INTEGER DEFAULT 0',
     ]
     for m in migraciones:
         db.execute(m)
@@ -241,10 +242,11 @@ def init_db():
     db.execute("UPDATE gastos SET moneda = 'ARS' WHERE moneda IS NULL")
     db.execute("UPDATE ingresos SET moneda = 'ARS' WHERE moneda IS NULL")
     db.execute("UPDATE gastos SET es_recurrente = 0 WHERE es_recurrente IS NULL")
-    db.execute("UPDATE gastos SET es_fijo = 0 WHERE es_fijo IS NULL")
     # Backfill: categorías cuyo nombre contenía "proveedor" pasan a tener el flag activo
     db.execute("UPDATE categorias SET requiere_proveedor = 1 WHERE nombre ILIKE '%proveedor%' AND requiere_proveedor = 0")
     db.execute("UPDATE categorias SET clasificacion = 'gasto' WHERE clasificacion IS NULL")
+    # Subcategorías previas quedan como "no fijas" por defecto (nunca en estado nulo)
+    db.execute("UPDATE subcategorias SET es_fija = 0 WHERE es_fija IS NULL")
 
     defaults = [
         ('nombre_negocio', 'Libreria Centro'),

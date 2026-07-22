@@ -20,7 +20,7 @@
 {# ── Período rápido ──────────────────────────────── #}
 <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
   <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
-  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
+  {% set qp = ('&tipo=' ~ tipo if tipo) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&fija=' ~ fija if fija) ~ ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&mostrar_anulados=1' if mostrar_anulados == '1') %}
   <a href="?periodo=hoy{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
   <a href="?periodo=7d{{ qp }}"  class="btn btn-sm {{ 'btn-secondary' if periodo == '7d'  else 'btn-outline-secondary' }}">7 días</a>
   <a href="?periodo=30d{{ qp }}" class="btn btn-sm {{ 'btn-secondary' if periodo == '30d' else 'btn-outline-secondary' }}">30 días</a>
@@ -84,6 +84,12 @@
       <option value="" {{ 'selected' if not clasificacion }}>Todas las clasificaciones</option>
       <option value="gasto" {{ 'selected' if clasificacion == 'gasto' }}>Solo Gastos</option>
       <option value="costo" {{ 'selected' if clasificacion == 'costo' }}>Solo Costos</option>
+    </select>
+    <select name="fija" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()"
+            title="Egresos fijos o no fijos (según la subcategoría)">
+      <option value="" {{ 'selected' if fija == '' }}>Fijas y no fijas</option>
+      <option value="1" {{ 'selected' if fija == '1' }}>Egresos fijos</option>
+      <option value="0" {{ 'selected' if fija == '0' }}>Egresos no fijos</option>
     </select>
   </div>
 </form>
@@ -169,6 +175,9 @@
           <td>
             {{ m.categoria_nombre }}
             {% if m.subcategoria_nombre %}<br><small class="text-muted">{{ m.subcategoria_nombre }}</small>{% endif %}
+            {% if m.es_fija %}
+            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle ms-1" style="font-size:.6rem"><i class="bi bi-pin-angle-fill me-1"></i>Fija</span>
+            {% endif %}
           </td>
           <td class="d-none d-sm-table-cell">{{ m.proveedor_nombre or '—' }}</td>
           <td class="d-none d-md-table-cell text-truncate" style="max-width:160px" title="{{ m.descripcion or '' }}">

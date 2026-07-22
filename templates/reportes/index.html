@@ -12,7 +12,7 @@
 {% block content %}
 
 {# ── Período rápido ───────────────────────────── #}
-{% set bqs = ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&proveedor_id=' ~ proveedor_id if proveedor_id) ~ ('&clasificacion=' ~ clasificacion if clasificacion) %}
+{% set bqs = ('&local_id=' ~ local_id if local_id) ~ ('&categoria_id=' ~ categoria_id if categoria_id) ~ ('&proveedor_id=' ~ proveedor_id if proveedor_id) ~ ('&clasificacion=' ~ clasificacion if clasificacion) ~ ('&fija=' ~ fija if fija) %}
 <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
   <span class="text-muted me-1" style="font-size:.82rem">Período rápido:</span>
   <a href="?periodo=hoy{{ bqs }}" class="btn btn-sm {{ 'btn-secondary' if periodo == 'hoy' else 'btn-outline-secondary' }}">Hoy</a>
@@ -74,6 +74,14 @@
         <option value="" {{ 'selected' if not clasificacion }}>Todos (Gastos + Costos)</option>
         <option value="gasto" {{ 'selected' if clasificacion == 'gasto' }}>Solo Gastos</option>
         <option value="costo" {{ 'selected' if clasificacion == 'costo' }}>Solo Costos</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Egresos fijos / no fijos</label>
+      <select name="fija" class="form-select">
+        <option value="" {{ 'selected' if fija == '' }}>Todas</option>
+        <option value="1" {{ 'selected' if fija == '1' }}>Solo fijas</option>
+        <option value="0" {{ 'selected' if fija == '0' }}>Solo no fijas</option>
       </select>
     </div>
   </div>

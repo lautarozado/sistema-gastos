@@ -33,10 +33,11 @@ def build_filters(request):
     proveedor_id = request.args.get('proveedor_id', '')
     tipo = request.args.get('tipo', '')
     clasificacion = request.args.get('clasificacion', '')
-    return fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion
+    fija = request.args.get('fija', '')
+    return fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija
 
 
-def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion=''):
+def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion='', fija=''):
     db = get_db()
 
     # Params
@@ -55,6 +56,12 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         gf += ' AND g.proveedor_id = ?'; gp.append(proveedor_id)
     if clasificacion:
         gf += " AND COALESCE(c.clasificacion, 'gasto') = ?"; gp.append(clasificacion)
+    # Filtro fija/no-fija (solo aplica a egresos; se basa en la subcategoría actual).
+    # "No fija" incluye egresos sin subcategoría. Los ingresos no se ven afectados.
+    if fija == '1':
+        gf += ' AND EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
+    elif fija == '0':
+        gf += ' AND NOT EXISTS (SELECT 1 FROM subcategorias s WHERE s.id = g.subcategoria_id AND COALESCE(s.es_fija, 0) = 1)'
 
     total_gastos = db.execute(
         f'SELECT COALESCE(SUM(g.monto), 0) as t FROM gastos g JOIN locales l ON g.local_id = l.id WHERE g.fecha BETWEEN ? AND ? AND g.anulado = 0 AND l.activo = 1{gf}',
@@ -165,7 +172,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
 
 @bp.route('/')
 def index():
-    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion = build_filters(request)
+    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija = build_filters(request)
     _, _, periodo = resolve_periodo(request)
 
     db = get_db()
@@ -174,7 +181,7 @@ def index():
     proveedores = db.execute('SELECT * FROM proveedores WHERE activo = 1 ORDER BY nombre').fetchall()
     db.close()
 
-    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion)
+    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion, fija)
 
     chart_cat = {
         'labels': [r['nombre'] for r in data['gastos_por_cat']],
@@ -201,6 +208,7 @@ def index():
         categoria_id=categoria_id,
         proveedor_id=proveedor_id,
         clasificacion=clasificacion,
+        fija=fija,
         periodo=periodo,
         medios_cobro=MEDIOS_COBRO,
         chart_cat=json.dumps(chart_cat),
@@ -211,7 +219,7 @@ def index():
 
 @bp.route('/pdf')
 def generar_pdf():
-    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion = build_filters(request)
+    fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, tipo, clasificacion, fija = build_filters(request)
 
     db = get_db()
     config = {r['clave']: r['valor'] for r in db.execute('SELECT clave, valor FROM configuracion').fetchall()}
@@ -225,7 +233,9 @@ def generar_pdf():
         cat_nombre = cat['nombre'] if cat else ''
     db.close()
 
-    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion)
+    data = get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_id, clasificacion, fija)
+
+    fija_label = {'1': 'Solo fijas', '0': 'Solo no fijas'}.get(fija, '')
 
     from pdf_generator import generar_pdf_reporte
     pdf_bytes = generar_pdf_reporte(
@@ -235,6 +245,7 @@ def generar_pdf():
         fecha_hasta=fecha_hasta,
         local_nombre=local_nombre,
         cat_nombre=cat_nombre,
+        fija_label=fija_label,
     )
 
     response = make_response(pdf_bytes)

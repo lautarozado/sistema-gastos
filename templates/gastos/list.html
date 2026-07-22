@@ -90,11 +90,6 @@
       <option value="gasto" {{ 'selected' if clasificacion == 'gasto' }}>Solo Gastos</option>
       <option value="costo" {{ 'selected' if clasificacion == 'costo' }}>Solo Costos</option>
     </select>
-    <select name="es_fijo" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-      <option value="" {{ 'selected' if es_fijo == '' }}>Fijos y variables</option>
-      <option value="1" {{ 'selected' if es_fijo == '1' }}>Solo fijos</option>
-      <option value="0" {{ 'selected' if es_fijo == '0' }}>Solo variables</option>
-    </select>
     {% if total_ars > 0 or total_usd > 0 %}
     <span class="ms-auto fw-bold amount-expense" style="font-size:.95rem">
       {% if total_ars > 0 %}ARS {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}{% endif %}
@@ -147,9 +142,6 @@
             <span class="badge-expense">{{ g.categoria_nombre }}</span>
             {% if g.clasificacion == 'costo' %}
             <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:.65rem">Costo</span>
-            {% endif %}
-            {% if g.es_fijo %}
-            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle ms-1" style="font-size:.65rem"><i class="bi bi-pin-angle-fill me-1"></i>Fijo</span>
             {% endif %}
           </td>
           <td class="d-none d-md-table-cell">{{ g.subcategoria_nombre or '—' }}</td>

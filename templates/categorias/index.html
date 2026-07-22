@@ -75,6 +75,11 @@
           <span class="d-flex align-items-center gap-2">
             <i class="bi bi-arrow-return-right text-muted" style="font-size:.75rem"></i>
             <span class="{{ 'text-muted text-decoration-line-through' if not sub.activo }}">{{ sub.nombre }}</span>
+            {% if sub.es_fija %}
+            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle" style="font-size:.62rem" title="Gasto fijo">
+              <i class="bi bi-pin-angle-fill me-1"></i>Fija
+            </span>
+            {% endif %}
             {% if not sub.activo %}
             <span class="badge bg-secondary" style="font-size:.62rem">Inactiva</span>
             {% endif %}
@@ -82,7 +87,7 @@
           <div class="d-flex gap-1">
             <button class="btn btn-xs btn-outline-primary btn-icon"
                     data-bs-toggle="modal" data-bs-target="#modalEditSub"
-                    onclick="fillEditSub({{ sub.id }}, '{{ sub.nombre|e }}')"
+                    onclick="fillEditSub({{ sub.id }}, '{{ sub.nombre|e }}', {{ sub.es_fija or 0 }})"
                     title="Editar">
               <i class="bi bi-pencil"></i>
             </button>
@@ -299,6 +304,16 @@
             <input type="text" name="nombre" id="newSubNombre" class="form-control"
                    placeholder="Ej: Electricidad, Gas, Internet..." required autofocus>
           </div>
+          <div class="mb-1">
+            <label class="form-label d-block">¿Es un gasto fijo?</label>
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="es_fija" id="newSubFijaNo" value="0" checked>
+              <label class="btn btn-outline-secondary btn-sm" for="newSubFijaNo">No fija</label>
+              <input type="radio" class="btn-check" name="es_fija" id="newSubFijaSi" value="1">
+              <label class="btn btn-outline-primary btn-sm" for="newSubFijaSi"><i class="bi bi-pin-angle-fill me-1"></i>Fija</label>
+            </div>
+            <div class="form-text">Fijas: alquiler, sueldos, internet… No fijas: electricidad, mantenimiento…</div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -322,6 +337,16 @@
           <div class="mb-3">
             <label class="form-label">Nombre <span class="text-danger">*</span></label>
             <input type="text" name="nombre" id="editSubNombre" class="form-control" required>
+          </div>
+          <div class="mb-1">
+            <label class="form-label d-block">¿Es un gasto fijo?</label>
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="es_fija" id="editSubFijaNo" value="0" checked>
+              <label class="btn btn-outline-secondary btn-sm" for="editSubFijaNo">No fija</label>
+              <input type="radio" class="btn-check" name="es_fija" id="editSubFijaSi" value="1">
+              <label class="btn btn-outline-primary btn-sm" for="editSubFijaSi"><i class="bi bi-pin-angle-fill me-1"></i>Fija</label>
+            </div>
+            <div class="form-text">Fijas: alquiler, sueldos, internet… No fijas: electricidad, mantenimiento…</div>
           </div>
         </div>
         <div class="modal-footer">
@@ -352,12 +377,18 @@ function fillEditCat(id, nombre, color, tipo, reqProv, clasificacion) {
   document.getElementById('editCatClasif').value = clasificacion || 'gasto';
   toggleClasif('editCatTipo', 'editClasifRow');
 }
-function fillEditSub(id, nombre) {
+function fillEditSub(id, nombre, esFija) {
   document.getElementById('formEditSub').action   = '/categorias/subcategoria/' + id + '/editar';
   document.getElementById('editSubNombre').value  = nombre;
+  document.getElementById('editSubFijaSi').checked = !!esFija;
+  document.getElementById('editSubFijaNo').checked = !esFija;
 }
 function openSubModal(catId) {
   document.getElementById('formNuevaSub').action = '/categorias/' + catId + '/subcategoria/nueva';
+  // Resetear el control fija/no-fija a "No fija" en cada apertura
+  document.getElementById('newSubFijaNo').checked = true;
+  document.getElementById('newSubFijaSi').checked = false;
+  document.getElementById('newSubNombre').value = '';
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevaSub')).show();
 }
 // Estado inicial del modal nueva

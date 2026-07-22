@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS subcategorias (
     categoria_id INTEGER NOT NULL,
     nombre TEXT NOT NULL,
     activo INTEGER DEFAULT 1,
+    es_fija INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS proveedores (
@@ -139,7 +140,6 @@ CREATE TABLE IF NOT EXISTS gastos (
     es_recurrente INTEGER DEFAULT 0,
     frecuencia TEXT,
     proxima_fecha DATE,
-    es_fijo INTEGER DEFAULT 0,
     moneda TEXT DEFAULT 'ARS',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -201,6 +201,10 @@ def _seed(conn):
 
         INSERT INTO proveedores (id, nombre, telefono, activo) VALUES (1, 'Proveedor Alfa', '11 1234-5678', 1);
         INSERT INTO proveedores (id, nombre, telefono, activo) VALUES (2, 'Proveedor Beta', NULL, 1);
+
+        -- subcategorías: una fija (Alquiler) y una no fija (Electricidad)
+        INSERT INTO subcategorias (id, categoria_id, nombre, activo, es_fija) VALUES (1, 1, 'Alquiler', 1, 1);
+        INSERT INTO subcategorias (id, categoria_id, nombre, activo, es_fija) VALUES (2, 1, 'Electricidad', 1, 0);
 
         -- gasto normal (sin cheques vinculados)
         INSERT INTO gastos (id, fecha, local_id, categoria_id, monto, moneda, anulado)

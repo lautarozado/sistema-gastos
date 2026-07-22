@@ -82,7 +82,6 @@ def list_gastos():
     categoria_id     = request.args.get('categoria_id', '')
     proveedor_id     = request.args.get('proveedor_id', '')
     clasificacion    = request.args.get('clasificacion', '')
-    es_fijo          = request.args.get('es_fijo', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     query = '''
@@ -90,7 +89,6 @@ def list_gastos():
                COALESCE(g.moneda, 'ARS') as moneda,
                g.comprobante_path,
                g.es_recurrente,
-               COALESCE(g.es_fijo, 0) as es_fijo,
                l.nombre as local_nombre,
                c.nombre as categoria_nombre,
                COALESCE(c.clasificacion, 'gasto') as clasificacion,
@@ -124,8 +122,6 @@ def list_gastos():
         query += ' AND g.proveedor_id = ?'; params.append(proveedor_id)
     if clasificacion:
         query += ' AND COALESCE(c.clasificacion, \'gasto\') = ?'; params.append(clasificacion)
-    if es_fijo in ('0', '1'):
-        query += ' AND COALESCE(g.es_fijo, 0) = ?'; params.append(int(es_fijo))
 
     query += ' ORDER BY g.fecha DESC, g.created_at DESC'
 
@@ -184,7 +180,6 @@ def list_gastos():
         categoria_id=categoria_id,
         proveedor_id=proveedor_id,
         clasificacion=clasificacion,
-        es_fijo=es_fijo,
         mostrar_anulados=mostrar_anulados,
         recurrentes_pendientes=recurrentes_pendientes,
     )
@@ -208,7 +203,6 @@ def nuevo_gasto():
         es_recurrente   = 1 if request.form.get('es_recurrente') == '1' else 0
         frecuencia      = request.form.get('frecuencia', '').strip() or None
         proxima_fecha   = request.form.get('proxima_fecha', '').strip() or None
-        es_fijo         = 1 if request.form.get('es_fijo') == '1' else 0
 
         errors = []
         if not fecha:
@@ -255,11 +249,11 @@ def nuevo_gasto():
             '''INSERT INTO gastos
                (fecha, local_id, categoria_id, subcategoria_id, proveedor_id,
                 descripcion, monto, medio_pago, observaciones, moneda,
-                comprobante_path, es_recurrente, frecuencia, proxima_fecha, es_fijo)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                comprobante_path, es_recurrente, frecuencia, proxima_fecha)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (fecha, local_id, categoria_id, subcategoria_id, proveedor_id,
              descripcion, monto, medio_pago, observaciones, moneda,
-             comprobante_path, es_recurrente, frecuencia, proxima_fecha, es_fijo)
+             comprobante_path, es_recurrente, frecuencia, proxima_fecha)
         )
 
         # Si viene de un recurrente, actualizar su proxima_fecha
@@ -314,7 +308,6 @@ def editar_gasto(gasto_id):
         es_recurrente   = 1 if request.form.get('es_recurrente') == '1' else 0
         frecuencia      = request.form.get('frecuencia', '').strip() or None
         proxima_fecha   = request.form.get('proxima_fecha', '').strip() or None
-        es_fijo         = 1 if request.form.get('es_fijo') == '1' else 0
 
         errors = []
         if not fecha:
@@ -362,11 +355,11 @@ def editar_gasto(gasto_id):
                fecha=?, local_id=?, categoria_id=?, subcategoria_id=?,
                proveedor_id=?, descripcion=?, monto=?, medio_pago=?, observaciones=?,
                moneda=?, comprobante_path=?, es_recurrente=?, frecuencia=?, proxima_fecha=?,
-               es_fijo=?, updated_at=CURRENT_TIMESTAMP
+               updated_at=CURRENT_TIMESTAMP
                WHERE id=?''',
             (fecha, local_id, categoria_id, subcategoria_id, proveedor_id,
              descripcion, monto, medio_pago, observaciones, moneda,
-             comprobante_path, es_recurrente, frecuencia, proxima_fecha, es_fijo, gasto_id)
+             comprobante_path, es_recurrente, frecuencia, proxima_fecha, gasto_id)
         )
         db.commit()
         db.close()
@@ -500,12 +493,10 @@ def exportar_csv():
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     clasificacion_csv = request.args.get('clasificacion', '')
-    es_fijo_csv       = request.args.get('es_fijo', '')
 
     query = '''
         SELECT g.fecha, l.nombre as local, c.nombre as categoria,
                COALESCE(c.clasificacion, 'gasto') as clasificacion,
-               COALESCE(g.es_fijo, 0) as es_fijo,
                COALESCE(sc.nombre, '') as subcategoria,
                COALESCE(p.nombre, '') as proveedor,
                COALESCE(g.descripcion, '') as descripcion,
@@ -534,8 +525,6 @@ def exportar_csv():
         query += ' AND g.proveedor_id = ?'; params.append(proveedor_id)
     if clasificacion_csv:
         query += " AND COALESCE(c.clasificacion, 'gasto') = ?"; params.append(clasificacion_csv)
-    if es_fijo_csv in ('0', '1'):
-        query += ' AND COALESCE(g.es_fijo, 0) = ?'; params.append(int(es_fijo_csv))
     query += ' ORDER BY g.fecha DESC'
 
     rows = db.execute(query, params).fetchall()
@@ -551,12 +540,11 @@ def exportar_csv():
 
     out = io.StringIO()
     w = csv.writer(out, delimiter=';')
-    w.writerow(['Fecha', 'Local', 'Categoría', 'Clasificación', 'Tipo', 'Subcategoría', 'Proveedor',
+    w.writerow(['Fecha', 'Local', 'Categoría', 'Clasificación', 'Subcategoría', 'Proveedor',
                 'Descripción', 'Monto', 'Moneda', 'Medio de pago', 'Observaciones'])
     for r in rows:
         w.writerow([_fmt(r['fecha']), r['local'], r['categoria'],
                     _CLASIF_LABEL.get(r['clasificacion'], r['clasificacion']),
-                    'Fijo' if r['es_fijo'] else 'Variable',
                     r['subcategoria'], r['proveedor'], r['descripcion'],
                     str(r['monto']).replace('.', ','), r['moneda'],
                     r['medio_pago'], r['observaciones']])

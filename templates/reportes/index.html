@@ -338,6 +338,112 @@
 
 </div>{# /row tablas #}
 
+{# ── Detalle de Egresos por categoría ─────────── #}
+{% if data.detalle_gastos %}
+<div class="card mt-3">
+  <div class="card-header fw-bold">
+    <i class="bi bi-list-ul me-2 text-danger"></i>Detalle de Egresos por Categoría
+    <span class="badge bg-secondary ms-2">{{ data.detalle_gastos|length }}</span>
+  </div>
+  <div class="card-body">
+    {% for cat_nombre, items in data.detalle_gastos|groupby('categoria') %}
+    {% set items = items|list %}
+    {% set slug = 'egCat' ~ loop.index %}
+    <div class="card mb-2">
+      <div class="card-header py-2 d-flex align-items-center" role="button"
+           data-bs-toggle="collapse" data-bs-target="#{{ slug }}" style="cursor:pointer">
+        <span class="fw-semibold">{{ cat_nombre or 'Sin categoría' }}</span>
+        <span class="badge bg-secondary ms-2">{{ items|length }}</span>
+        <span class="ms-auto fw-bold amount-expense">
+          {{ moneda }} {{ "{:,.2f}".format(items|sum(attribute='monto')).replace(",","X").replace(".",",").replace("X",".") }}
+        </span>
+        <i class="bi bi-chevron-down ms-2"></i>
+      </div>
+      <div class="collapse" id="{{ slug }}">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 align-middle">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Local</th><th>Subcategoría</th><th>Proveedor</th>
+                <th>Descripción</th><th class="text-end">Monto</th><th>Medio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in items %}
+              <tr>
+                <td class="text-nowrap">{{ r.fecha|fmt_date }}</td>
+                <td>{{ r.local }}</td>
+                <td>{{ r.subcategoria }}</td>
+                <td>{{ r.proveedor }}</td>
+                <td>{{ r.descripcion }}</td>
+                <td class="text-end amount-expense fw-bold text-nowrap">
+                  {{ moneda }} {{ "{:,.2f}".format(r.monto).replace(",","X").replace(".",",").replace("X",".") }}
+                </td>
+                <td class="text-nowrap">{{ r.medio_pago }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── Detalle de Ingresos por categoría ────────── #}
+{% if data.detalle_ingresos %}
+<div class="card mt-3">
+  <div class="card-header fw-bold">
+    <i class="bi bi-list-ul me-2 text-success"></i>Detalle de Ingresos por Categoría
+    <span class="badge bg-secondary ms-2">{{ data.detalle_ingresos|length }}</span>
+  </div>
+  <div class="card-body">
+    {% for cat_nombre, items in data.detalle_ingresos|groupby('categoria') %}
+    {% set items = items|list %}
+    {% set slug = 'inCat' ~ loop.index %}
+    <div class="card mb-2">
+      <div class="card-header py-2 d-flex align-items-center" role="button"
+           data-bs-toggle="collapse" data-bs-target="#{{ slug }}" style="cursor:pointer">
+        <span class="fw-semibold">{{ cat_nombre or 'Sin categoría' }}</span>
+        <span class="badge bg-secondary ms-2">{{ items|length }}</span>
+        <span class="ms-auto fw-bold amount-income">
+          {{ moneda }} {{ "{:,.2f}".format(items|sum(attribute='total')).replace(",","X").replace(".",",").replace("X",".") }}
+        </span>
+        <i class="bi bi-chevron-down ms-2"></i>
+      </div>
+      <div class="collapse" id="{{ slug }}">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 align-middle">
+            <thead>
+              <tr>
+                <th>Desde</th><th>Hasta</th><th>Local</th>
+                <th class="text-end">Total</th><th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in items %}
+              <tr>
+                <td class="text-nowrap">{{ r.fecha_desde|fmt_date }}</td>
+                <td class="text-nowrap">{{ r.fecha_hasta|fmt_date }}</td>
+                <td>{{ r.local }}</td>
+                <td class="text-end amount-income fw-bold text-nowrap">
+                  {{ moneda }} {{ "{:,.2f}".format(r.total).replace(",","X").replace(".",",").replace("X",".") }}
+                </td>
+                <td>{{ r.observaciones }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}

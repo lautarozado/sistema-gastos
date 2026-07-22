@@ -50,6 +50,7 @@ def get_report_data(fecha_desde, fecha_hasta, local_id, categoria_id, proveedor_
         if_str += ' AND i.local_id = ?'; ip.append(local_id)
     if categoria_id:
         gf += ' AND g.categoria_id = ?'; gp.append(categoria_id)
+        if_str += ' AND i.categoria_id = ?'; ip.append(categoria_id)
     if proveedor_id:
         gf += ' AND g.proveedor_id = ?'; gp.append(proveedor_id)
     if clasificacion:

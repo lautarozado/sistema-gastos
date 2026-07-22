@@ -22,7 +22,7 @@ def _get_db_params():
         'connect_timeout': 10,
     }
 
-MEDIOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta de crédito', 'Tarjeta de débito', 'Mercado Pago', 'Otro']
+MEDIOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta de crédito', 'Tarjeta de débito', 'Mercado Pago', 'Cheque', 'eCheq', 'Otro']
 
 MEDIOS_COBRO = [
     ('efectivo', 'Efectivo'),

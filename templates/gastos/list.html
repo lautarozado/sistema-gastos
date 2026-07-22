@@ -90,6 +90,13 @@
       <option value="gasto" {{ 'selected' if clasificacion == 'gasto' }}>Solo Gastos</option>
       <option value="costo" {{ 'selected' if clasificacion == 'costo' }}>Solo Costos</option>
     </select>
+    <select name="medio_pago" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()"
+            title="Filtrar por medio de pago (ej: eCheq)">
+      <option value="" {{ 'selected' if not medio_pago }}>Todos los medios de pago</option>
+      {% for m in medios_pago %}
+      <option value="{{ m }}" {{ 'selected' if medio_pago == m }}>{{ m }}</option>
+      {% endfor %}
+    </select>
     {% if total_ars > 0 or total_usd > 0 %}
     <span class="ms-auto fw-bold amount-expense" style="font-size:.95rem">
       {% if total_ars > 0 %}ARS {{ "{:,.2f}".format(total_ars).replace(",","X").replace(".",",").replace("X",".") }}{% endif %}

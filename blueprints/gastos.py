@@ -82,6 +82,7 @@ def list_gastos():
     categoria_id     = request.args.get('categoria_id', '')
     proveedor_id     = request.args.get('proveedor_id', '')
     clasificacion    = request.args.get('clasificacion', '')
+    medio_pago       = request.args.get('medio_pago', '')
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     query = '''
@@ -122,6 +123,8 @@ def list_gastos():
         query += ' AND g.proveedor_id = ?'; params.append(proveedor_id)
     if clasificacion:
         query += ' AND COALESCE(c.clasificacion, \'gasto\') = ?'; params.append(clasificacion)
+    if medio_pago:
+        query += ' AND g.medio_pago = ?'; params.append(medio_pago)
 
     query += ' ORDER BY g.fecha DESC, g.created_at DESC'
 
@@ -167,6 +170,7 @@ def list_gastos():
         locales=locales,
         categorias=categorias,
         proveedores=proveedores,
+        medios_pago=MEDIOS_PAGO,
         total_filtrado=total_filtrado,
         total_ars=total_ars,
         total_usd=total_usd,
@@ -180,6 +184,7 @@ def list_gastos():
         categoria_id=categoria_id,
         proveedor_id=proveedor_id,
         clasificacion=clasificacion,
+        medio_pago=medio_pago,
         mostrar_anulados=mostrar_anulados,
         recurrentes_pendientes=recurrentes_pendientes,
     )
@@ -493,6 +498,7 @@ def exportar_csv():
     mostrar_anulados = request.args.get('mostrar_anulados', '0')
 
     clasificacion_csv = request.args.get('clasificacion', '')
+    medio_pago_csv    = request.args.get('medio_pago', '')
 
     query = '''
         SELECT g.fecha, l.nombre as local, c.nombre as categoria,
@@ -525,6 +531,8 @@ def exportar_csv():
         query += ' AND g.proveedor_id = ?'; params.append(proveedor_id)
     if clasificacion_csv:
         query += " AND COALESCE(c.clasificacion, 'gasto') = ?"; params.append(clasificacion_csv)
+    if medio_pago_csv:
+        query += ' AND g.medio_pago = ?'; params.append(medio_pago_csv)
     query += ' ORDER BY g.fecha DESC'
 
     rows = db.execute(query, params).fetchall()
